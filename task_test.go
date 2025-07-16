@@ -1,20 +1,24 @@
 package inforo_test
 
 import (
-	"laplasd/internal/core"
-	"laplasd/pkg/kernel"
 	"testing"
+
+	"github.com/laplasd/inforo"
+	"github.com/laplasd/inforo/model"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupCoreWithComponent() *core.Core {
+func setupCoreWithComponent() *inforo.Core {
 	logger := logrus.New()
-	c := core.New(logger)
+	opts := inforo.CoreOptions{
+		Logger: logger,
+	}
+	c := inforo.NewCore(opts)
 
 	// Зарегистрируем один компонент
-	c.RegisterComponent(kernel.Component{
+	c.Components.Register(model.Component{
 		ID:   "component-1",
 		Name: "Test Component",
 		Type: "kuber-controller",
@@ -26,32 +30,32 @@ func setupCoreWithComponent() *core.Core {
 func TestRegisterTask_Success(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := &kernel.Task{
-		ID:          "task-1",
-		Name:        "Test Task",
-		Type:        "update",
-		ComponentID: "component-1",
-	}
+	task := (model.Task{
+		ID:         "task-1",
+		Name:       "Test Task",
+		Type:       "update",
+		Components: []string{"component-1"},
+	})
 
-	registered, err := c.RegisterTask(task)
+	registered, err := c.Tasks.Register(task)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, registered)
-	assert.Equal(t, kernel.StatusPending, registered.Status.Status)
+	assert.Equal(t, model.StatusPending, registered.StatusHistory.LastStatus)
 }
 
 func TestRegisterTask_Duplicate(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := &kernel.Task{
-		ID:          "task-1",
-		Name:        "Test Task",
-		Type:        "update",
-		ComponentID: "component-1",
+	task := model.Task{
+		ID:         "task-1",
+		Name:       "Test Task",
+		Type:       "update",
+		Components: []string{"component-1"},
 	}
 
-	_, _ = c.RegisterTask(task)
-	_, err := c.RegisterTask(task)
+	_, _ = c.Tasks.Register(task)
+	_, err := c.Tasks.Register(task)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "task already exists")
@@ -60,14 +64,14 @@ func TestRegisterTask_Duplicate(t *testing.T) {
 func TestRegisterTask_InvalidComponent(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := &kernel.Task{
-		ID:          "task-2",
-		Name:        "Invalid",
-		Type:        "update",
-		ComponentID: "nonexistent",
+	task := model.Task{
+		ID:         "task-2",
+		Name:       "Invalid",
+		Type:       "update",
+		Components: []string{"nonexistent"},
 	}
 
-	_, err := c.RegisterTask(task)
+	_, err := c.Tasks.Register(task)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "component with given ComponentID not found")
@@ -76,14 +80,14 @@ func TestRegisterTask_InvalidComponent(t *testing.T) {
 func TestRegisterTask_InvalidType(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := &kernel.Task{
-		ID:          "task-3",
-		Name:        "Bad Type",
-		Type:        "invalid-type",
-		ComponentID: "component-1",
+	task := model.Task{
+		ID:         "task-3",
+		Name:       "Bad Type",
+		Type:       "invalid-type",
+		Components: []string{"component-1"},
 	}
 
-	_, err := c.RegisterTask(task)
+	_, err := c.Tasks.Register(task)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "invalid task type")
@@ -92,16 +96,16 @@ func TestRegisterTask_InvalidType(t *testing.T) {
 func TestGetTask(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := &kernel.Task{
-		ID:          "task-1",
-		Name:        "Test Task",
-		Type:        "update",
-		ComponentID: "component-1",
+	task := model.Task{
+		ID:         "task-1",
+		Name:       "Test Task",
+		Type:       "update",
+		Components: []string{"component-1"},
 	}
 
-	_, _ = c.RegisterTask(task)
+	_, _ = c.Tasks.Register(task)
 
-	fetched, err := c.GetTask("task-1")
+	fetched, err := c.Tasks.Get("task-1")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "task-1", fetched.ID)
@@ -110,7 +114,7 @@ func TestGetTask(t *testing.T) {
 func TestGetTask_NotFound(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	_, err := c.GetTask("missing")
+	_, err := c.Tasks.Get("missing")
 	assert.Error(t, err)
 	assert.EqualError(t, err, "task not found")
 }
@@ -118,61 +122,61 @@ func TestGetTask_NotFound(t *testing.T) {
 func TestUpdateTask(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := &kernel.Task{
-		ID:          "task-1",
-		Name:        "Original",
-		Type:        "update",
-		ComponentID: "component-1",
+	task := model.Task{
+		ID:         "task-1",
+		Name:       "Original",
+		Type:       "update",
+		Components: []string{"component-1"},
 	}
-	_, _ = c.RegisterTask(task)
+	_, _ = c.Tasks.Register(task)
 
-	updated := &kernel.Task{
-		ID:          "task-1",
-		Name:        "Updated",
-		Type:        "update",
-		ComponentID: "component-1",
+	updated := model.Task{
+		ID:         "task-1",
+		Name:       "Updated",
+		Type:       "update",
+		Components: []string{"component-1"},
 		//Status:      kernel.StatusSuccess,
 	}
-	err := c.UpdateTask("task-1", updated)
+	err := c.Tasks.Update("task-1", updated)
 
 	assert.NoError(t, err)
 
-	got, _ := c.GetTask("task-1")
+	got, _ := c.Tasks.Get("task-1")
 	assert.Equal(t, "Updated", got.Name)
-	assert.Equal(t, kernel.StatusPending, got.Status.Status)
+	assert.Equal(t, model.StatusPending, got.StatusHistory.LastStatus)
 }
 
 func TestDeleteTask(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := &kernel.Task{
-		ID:          "task-1",
-		Name:        "ToDelete",
-		Type:        "update",
-		ComponentID: "component-1",
+	task := model.Task{
+		ID:         "task-1",
+		Name:       "ToDelete",
+		Type:       "update",
+		Components: []string{"component-1"},
 	}
-	_, _ = c.RegisterTask(task)
+	_, _ = c.Tasks.Register(task)
 
-	err := c.DeleteTask("task-1")
+	err := c.Tasks.Delete("task-1")
 	assert.NoError(t, err)
 
-	_, err = c.GetTask("task-1")
+	_, err = c.Tasks.Get("task-1")
 	assert.Error(t, err)
 }
 
 func TestListTasks(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	tasks := []*kernel.Task{
-		{ID: "task-1", Name: "Task 1", Type: "update", ComponentID: "component-1"},
-		{ID: "task-2", Name: "Task 2", Type: "check", ComponentID: "component-1"},
+	tasks := []model.Task{
+		{ID: "task-1", Name: "Task 1", Type: "update", Components: []string{"component-1"}},
+		{ID: "task-2", Name: "Task 2", Type: "check", Components: []string{"component-1"}},
 	}
 
 	for _, tsk := range tasks {
-		_, _ = c.RegisterTask(tsk)
+		_, _ = c.Tasks.Register(tsk)
 	}
 
-	list := c.ListTasks()
+	list, _ := c.Tasks.List()
 
 	assert.Len(t, list, 2)
 }

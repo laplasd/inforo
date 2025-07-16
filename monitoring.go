@@ -14,8 +14,8 @@ import (
 type MonitoringRegistry struct {
 	monitorControllers api.MonitoringControllerRegistry
 	monitorings        map[string]model.Monitoring
-	StatusManager
-	Events
+	*StatusManager
+	*Events
 	mu     *sync.RWMutex
 	logger *logrus.Logger
 }
@@ -23,8 +23,8 @@ type MonitoringRegistry struct {
 type MonitoringRegistryOptions struct {
 	Logger        *logrus.Logger
 	Controllers   api.MonitoringControllerRegistry
-	StatusManager StatusManager
-	EventManager  Events
+	StatusManager *StatusManager
+	EventManager  *Events
 	// Другие зависимости
 }
 

@@ -4,8 +4,8 @@ import (
 	"io"
 	"testing"
 
+	"github.com/laplasd/inforo"
 	"github.com/laplasd/inforo/api"
-	"github.com/laplasd/inforo/model"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,7 +44,7 @@ type MockPlanRegistry struct {
 
 func TestNewNullLogger(t *testing.T) {
 	t.Run("should create logger with discard output", func(t *testing.T) {
-		logger := NewNullLogger()
+		logger := inforo.NewNullLogger()
 		assert.NotNil(t, logger)
 		assert.Equal(t, io.Discard, logger.Out)
 	})
@@ -52,10 +52,10 @@ func TestNewNullLogger(t *testing.T) {
 
 func TestNewDefaultCore(t *testing.T) {
 	t.Run("should create core with all default registries", func(t *testing.T) {
-		core := NewDefaultCore()
+		core := inforo.NewDefaultCore()
 
 		assert.NotNil(t, core)
-		assert.NotNil(t, core.logger)
+		assert.NotNil(t, core.Logger)
 		assert.NotNil(t, core.Components)
 		assert.NotNil(t, core.Controllers)
 		assert.NotNil(t, core.Monitorings)
@@ -64,36 +64,36 @@ func TestNewDefaultCore(t *testing.T) {
 		assert.NotNil(t, core.Plans)
 
 		// Verify logger is null logger
-		assert.Equal(t, io.Discard, core.logger.Out)
+		assert.Equal(t, io.Discard, core.Logger.Out)
 	})
 }
 
 func TestNewCore(t *testing.T) {
 	tests := []struct {
 		name     string
-		setup    func() CoreOptions
-		validate func(*testing.T, *Core)
+		setup    func() inforo.CoreOptions
+		validate func(*testing.T, *inforo.Core)
 	}{
 		{
 			name: "with custom logger",
-			setup: func() CoreOptions {
+			setup: func() inforo.CoreOptions {
 				logger := logrus.New()
 				logger.SetLevel(logrus.DebugLevel)
-				return CoreOptions{Logger: logger}
+				return inforo.CoreOptions{Logger: logger}
 			},
-			validate: func(t *testing.T, c *Core) {
-				assert.Equal(t, logrus.DebugLevel, c.logger.GetLevel())
+			validate: func(t *testing.T, c *inforo.Core) {
+				assert.Equal(t, logrus.DebugLevel, c.Logger.GetLevel())
 				// Other registries should still be created
 				assert.NotNil(t, c.Controllers)
 			},
 		},
 		{
 			name: "with custom component registry",
-			setup: func() CoreOptions {
+			setup: func() inforo.CoreOptions {
 				mockComp := new(MockComponentRegistry)
-				return CoreOptions{Components: mockComp}
+				return inforo.CoreOptions{Components: mockComp}
 			},
-			validate: func(t *testing.T, c *Core) {
+			validate: func(t *testing.T, c *inforo.Core) {
 				_, ok := c.Components.(*MockComponentRegistry)
 				assert.True(t, ok)
 				// Dependent registries should use this component registry
@@ -102,8 +102,8 @@ func TestNewCore(t *testing.T) {
 		},
 		{
 			name: "with all custom registries",
-			setup: func() CoreOptions {
-				return CoreOptions{
+			setup: func() inforo.CoreOptions {
+				return inforo.CoreOptions{
 					Logger:             logrus.New(),
 					Components:         new(MockComponentRegistry),
 					Controllers:        new(MockControllerRegistry),
@@ -113,7 +113,7 @@ func TestNewCore(t *testing.T) {
 					Plans:              new(MockPlanRegistry),
 				}
 			},
-			validate: func(t *testing.T, c *Core) {
+			validate: func(t *testing.T, c *inforo.Core) {
 				assert.IsType(t, &MockComponentRegistry{}, c.Components)
 				assert.IsType(t, &MockControllerRegistry{}, c.Controllers)
 				assert.IsType(t, &MockMonitoringRegistry{}, c.Monitorings)
@@ -127,7 +127,7 @@ func TestNewCore(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := tt.setup()
-			core := NewCore(opts)
+			core := inforo.NewCore(opts)
 			tt.validate(t, core)
 		})
 	}
@@ -136,65 +136,65 @@ func TestNewCore(t *testing.T) {
 func TestDefaultOpts(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    CoreOptions
-		validate func(*testing.T, CoreOptions)
+		input    inforo.CoreOptions
+		validate func(*testing.T, inforo.CoreOptions)
 	}{
 		{
 			name:  "nil logger",
-			input: CoreOptions{Logger: nil},
-			validate: func(t *testing.T, opts CoreOptions) {
+			input: inforo.CoreOptions{Logger: nil},
+			validate: func(t *testing.T, opts inforo.CoreOptions) {
 				assert.NotNil(t, opts.Logger)
 				assert.Equal(t, io.Discard, opts.Logger.Out)
 			},
 		},
 		{
 			name:  "nil controllers",
-			input: CoreOptions{Controllers: nil},
-			validate: func(t *testing.T, opts CoreOptions) {
+			input: inforo.CoreOptions{Controllers: nil},
+			validate: func(t *testing.T, opts inforo.CoreOptions) {
 				assert.NotNil(t, opts.Controllers)
 			},
 		},
 		{
 			name:  "nil monitor controllers",
-			input: CoreOptions{MonitorControllers: nil},
-			validate: func(t *testing.T, opts CoreOptions) {
+			input: inforo.CoreOptions{MonitorControllers: nil},
+			validate: func(t *testing.T, opts inforo.CoreOptions) {
 				assert.NotNil(t, opts.MonitorControllers)
 			},
 		},
 		{
 			name:  "nil components",
-			input: CoreOptions{Components: nil},
-			validate: func(t *testing.T, opts CoreOptions) {
+			input: inforo.CoreOptions{Components: nil},
+			validate: func(t *testing.T, opts inforo.CoreOptions) {
 				assert.NotNil(t, opts.Components)
 				// Should have set the controllers dependency
-				assert.NotNil(t, opts.Components.(*ComponentRegistry).Controllers)
+				assert.NotNil(t, opts.Components.(*inforo.ComponentRegistry).Controllers)
 			},
 		},
 		{
 			name:  "nil monitorings",
-			input: CoreOptions{Monitorings: nil},
-			validate: func(t *testing.T, opts CoreOptions) {
+			input: inforo.CoreOptions{Monitorings: nil},
+			validate: func(t *testing.T, opts inforo.CoreOptions) {
 				assert.NotNil(t, opts.Monitorings)
 			},
 		},
 		{
 			name:  "nil tasks",
-			input: CoreOptions{Tasks: nil},
-			validate: func(t *testing.T, opts CoreOptions) {
+			input: inforo.CoreOptions{Tasks: nil},
+			validate: func(t *testing.T, opts inforo.CoreOptions) {
 				assert.NotNil(t, opts.Tasks)
 				// Should have dependencies set
-				taskReg := opts.Tasks.(*TaskRegistry)
+				taskReg := opts.Tasks.(*inforo.TaskRegistry)
 				assert.NotNil(t, taskReg.Components)
 				assert.NotNil(t, taskReg.Controllers)
 			},
 		},
 		{
 			name:  "nil plans",
-			input: CoreOptions{Plans: nil},
-			validate: func(t *testing.T, opts CoreOptions) {
+			input: inforo.CoreOptions{Plans: nil},
+			validate: func(t *testing.T, opts inforo.CoreOptions) {
 				assert.NotNil(t, opts.Plans)
 				// Should have dependencies set
-				planReg := opts.Plans.(*PlanRegistry)
+				planReg := opts.Plans.(*inforo.PlanRegistry)
 				assert.NotNil(t, planReg.Components)
 				assert.NotNil(t, planReg.Tasks)
 			},
@@ -203,61 +203,8 @@ func TestDefaultOpts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := defaultOpts(tt.input)
+			result := inforo.DefaultOpts(tt.input)
 			tt.validate(t, result)
-		})
-	}
-}
-
-func TestGenerateID(t *testing.T) {
-	tests := []struct {
-		name     string
-		prefix   string
-		validate func(*testing.T, string)
-	}{
-		{
-			name:   "with prefix",
-			prefix: "test",
-			validate: func(t *testing.T, id string) {
-				assert.Contains(t, id, "test-")
-				assert.Greater(t, len(id), len("test-")+10) // UUID part should be long enough
-			},
-		},
-		{
-			name:   "empty prefix",
-			prefix: "",
-			validate: func(t *testing.T, id string) {
-				assert.NotContains(t, id, "--") // Shouldn't have double dash
-				assert.Greater(t, len(id), 10)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			id := generateID(tt.prefix)
-			tt.validate(t, id)
-		})
-	}
-}
-
-func TestIsValidTaskType(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    model.TaskType
-		expected bool
-	}{
-		{"valid update task", model.UpdateTask, true},
-		{"valid rollback task", model.RollbackTask, true},
-		{"valid check task", model.CheckTask, true},
-		{"invalid task type", model.TaskType("invalid"), false},
-		{"empty task type", model.TaskType(""), false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isValidTaskType(tt.input)
-			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

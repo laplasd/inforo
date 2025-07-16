@@ -6,12 +6,11 @@ import (
 	"github.com/laplasd/inforo/api"
 	"github.com/laplasd/inforo/model"
 
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
 type Core struct {
-	logger             *logrus.Logger
+	Logger             *logrus.Logger
 	Components         api.ComponentRegistry
 	Controllers        api.ControllerRegistry
 	Monitorings        api.MonitoringRegistry
@@ -37,10 +36,10 @@ func NewNullLogger() *logrus.Logger {
 }
 
 func NewDefaultCore() *Core {
-	opts := defaultOpts(CoreOptions{})
+	opts := DefaultOpts(CoreOptions{})
 
 	c := &Core{
-		logger:             opts.Logger,
+		Logger:             opts.Logger,
 		Components:         opts.Components,
 		Controllers:        opts.Controllers,
 		Monitorings:        opts.Monitorings,
@@ -52,10 +51,10 @@ func NewDefaultCore() *Core {
 }
 
 func NewCore(opt CoreOptions) *Core {
-	opts := defaultOpts(opt)
+	opts := DefaultOpts(opt)
 
 	c := &Core{
-		logger:             opts.Logger,
+		Logger:             opts.Logger,
 		Components:         opts.Components,
 		Controllers:        opts.Controllers,
 		Monitorings:        opts.Monitorings,
@@ -66,7 +65,7 @@ func NewCore(opt CoreOptions) *Core {
 	return c
 }
 
-func defaultOpts(opt CoreOptions) CoreOptions {
+func DefaultOpts(opt CoreOptions) CoreOptions {
 	if opt.Logger == nil {
 		opt.Logger = NewNullLogger()
 	}
@@ -115,10 +114,6 @@ func defaultOpts(opt CoreOptions) CoreOptions {
 		opt.Plans, _ = NewPlanRegistry(planOpts)
 	}
 	return opt
-}
-
-func generateID(prefix string) string {
-	return prefix + "-" + uuid.New().String()
 }
 
 func isValidTaskType(t model.TaskType) bool {

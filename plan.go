@@ -18,8 +18,8 @@ type PlanRegistry struct {
 	plans      map[string]*model.Plan
 	Components api.ComponentRegistry
 	Tasks      api.TaskRegistry
-	StatusManager
-	Events
+	*StatusManager
+	*Events
 	mu     *sync.RWMutex
 	logger *logrus.Logger
 }
@@ -28,8 +28,8 @@ type PlanRegistryOptions struct {
 	Logger        *logrus.Logger
 	Components    api.ComponentRegistry
 	Tasks         api.TaskRegistry
-	StatusManager StatusManager
-	EventManager  Events
+	StatusManager *StatusManager
+	EventManager  *Events
 }
 
 func NewPlanRegistry(opts PlanRegistryOptions) (api.PlanRegistry, error) {

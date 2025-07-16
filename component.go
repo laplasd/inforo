@@ -15,8 +15,8 @@ import (
 type ComponentRegistry struct {
 	Controllers api.ControllerRegistry
 	components  map[string]*model.Component
-	Events
-	StatusManager
+	*Events
+	*StatusManager
 	mu     *sync.RWMutex
 	logger *logrus.Logger
 }
@@ -24,9 +24,8 @@ type ComponentRegistry struct {
 type ComponentRegistryOptions struct {
 	Logger        *logrus.Logger
 	Controllers   api.ControllerRegistry
-	StatusManager StatusManager
-	EventManager  Events
-	// Другие зависимости
+	StatusManager *StatusManager
+	EventManager  *Events
 }
 
 func NewComponentRegistry(opts ComponentRegistryOptions) (api.ComponentRegistry, error) {

@@ -18,8 +18,8 @@ type TaskRegistry struct {
 	Controllers        api.ControllerRegistry
 	Monitoring         api.MonitoringRegistry
 	MonitorControllers api.MonitoringControllerRegistry
-	StatusManager
-	Events
+	*StatusManager
+	*Events
 	MU     *sync.RWMutex
 	logger *logrus.Logger
 }
@@ -30,8 +30,8 @@ type TaskRegistryOptions struct {
 	Controllers        api.ControllerRegistry
 	Monitoring         api.MonitoringRegistry
 	MonitorControllers api.MonitoringControllerRegistry
-	StatusManager      StatusManager
-	EventManager       Events
+	StatusManager      *StatusManager
+	EventManager       *Events
 	// Другие зависимости
 }
 
