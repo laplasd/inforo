@@ -18,7 +18,6 @@ type ControllerRegistry struct {
 
 type ControllerRegistryOptions struct {
 	Logger *logrus.Logger
-	// Другие зависимости
 }
 
 func NewControllerRegistry(opts ControllerRegistryOptions) (api.ControllerRegistry, error) {
@@ -54,7 +53,6 @@ func (cr *ControllerRegistry) List() ([]api.Controller, error) {
 }
 
 func (cr *ControllerRegistry) ListType() ([]string, error) {
-	// Предположим, что cr.controllers - это map[string]api.Controller
 	keys := make([]string, 0, len(cr.controllers))
 	for k := range cr.controllers {
 		keys = append(keys, k)

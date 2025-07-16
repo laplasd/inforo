@@ -7,7 +7,7 @@ import (
 type PlanRegistry interface {
 	StatusProvider
 	// CRUD methods
-	Register(tasks []model.Task) (*model.Plan, error)
+	Register(tasks []*model.Task) (*model.Plan, error)
 	Get(id string) (*model.Plan, error)
 	Update(id string, comp model.Plan) error
 	Delete(id string) error
