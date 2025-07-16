@@ -21,5 +21,5 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	fmt.Println("%s", comp)
+	fmt.Printf("%v", comp)
 }
