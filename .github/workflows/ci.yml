@@ -5,25 +5,10 @@ on:
     branches: [ "dev" ]
   pull_request:
     branches: [ "dev" ]
-  workflow_dispatch:  # Добавляем возможность ручного запуска
-    inputs:
-      environment:
-        description: 'Select environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-        - staging
-        - production
-      skip-tests:
-        description: 'Skip unit tests?'
-        required: false
-        default: false
-        type: boolean
+  workflow_dispatch:
 
 jobs:
   test:
-    if: ${{ !inputs.skip-tests }}  # Пропускаем тесты если выбрано skip-tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -41,8 +26,24 @@ jobs:
       with:
         file: ./coverage.out
     
-  create-merge-request:
+  check-branch-exists:
     needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      branch_exists: ${{ steps.check-branch.outputs.exists }}
+    steps:
+    - name: Check if test branch exists
+      id: check-branch
+      run: |
+        if git ls-remote --exit-code --heads origin test; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+  create-merge-request:
+    needs: check-branch-exists
+    if: needs.check-branch-exists.outputs.branch_exists == 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -51,10 +52,28 @@ jobs:
       uses: peter-evans/create-pull-request@v5
       with:
         base: test
-        branch: auto-merge-to-test-${{ github.run_id }}  # Уникальное имя ветки
-        title: "Auto-merge [${{ inputs.environment }}]: Test results successful"
-        body: |
-          Automated merge request after successful unit tests
-          Environment: ${{ inputs.environment }}
-          Run ID: ${{ github.run_id }}
-        labels: "automated,${{ inputs.environment }}"
+        branch: auto-merge-to-test-${{ github.run_id }}
+        title: "Auto-merge: Test results successful"
+        body: "Automated merge request after successful unit tests"
+        labels: "automated"
+
+  create-branch-and-pr:
+    needs: check-branch-exists
+    if: needs.check-branch-exists.outputs.branch_exists == 'false'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Create test branch
+      run: |
+        git checkout -b test
+        git push origin test
+    
+    - name: Create initial PR to test branch
+      uses: peter-evans/create-pull-request@v5
+      with:
+        base: test
+        branch: initial-setup-${{ github.run_id }}
+        title: "Initial setup of test branch"
+        body: "Creating test branch for future merges"
+        labels: "automated,setup"
