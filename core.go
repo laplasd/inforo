@@ -74,6 +74,7 @@ func DefaultOpts(opt CoreOptions) CoreOptions {
 			Logger: opt.Logger,
 		}
 		opt.Controllers, _ = NewControllerRegistry(controllerOpts)
+
 	}
 	if opt.MonitorControllers == nil {
 		monitorControllerOpts := MonitoringControllerRegistryOptions{

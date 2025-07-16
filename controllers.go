@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/laplasd/inforo/api"
+	"github.com/laplasd/inforo/controllers"
 
 	"github.com/sirupsen/logrus"
 )
@@ -21,11 +22,17 @@ type ControllerRegistryOptions struct {
 }
 
 func NewControllerRegistry(opts ControllerRegistryOptions) (api.ControllerRegistry, error) {
-	return &ControllerRegistry{
+
+	cr := &ControllerRegistry{
 		mu:          &sync.RWMutex{},
 		logger:      opts.Logger,
 		controllers: make(map[string]api.Controller),
-	}, nil
+	}
+
+	cr.Register("kuber-controller", &controllers.KuberController{Logger: opts.Logger})
+	cr.Register("ssh-controller", &controllers.SSHController{Logger: opts.Logger})
+
+	return cr, nil
 
 }
 
