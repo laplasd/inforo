@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type Plan struct {
 	ID            string                `json:"id"` // Уникальный идентификатор плана
@@ -8,6 +11,7 @@ type Plan struct {
 	RollbackStack []*RollbackCheckpoint // Стек точек отката
 	StatusHistory *StatusHistory        `json:"StatusHistory,omitempty"` // История статусов плана
 	EventHistory  *EventHistory         `json:"EventHistory,omitempty"`
+	MU            sync.RWMutex          `json:"-"`
 }
 
 // TaskGraph представляет направленный ациклический граф задач

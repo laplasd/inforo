@@ -1,5 +1,7 @@
 package model
 
+import "sync"
+
 type RollBackType string
 
 const (
@@ -14,4 +16,5 @@ type Rollback struct {
 	PlanID     string            `json:"PlanID,omitempty"`
 	Components []string          `json:"Components,omitempty"`
 	Metadata   map[string]string `json:"MetaData,omitempty"`
+	MU         sync.RWMutex      `json:"-"`
 }
