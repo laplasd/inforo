@@ -16,14 +16,20 @@ func setupCoreWithComponent() *inforo.Core {
 		Logger: logger,
 	}
 	c := inforo.NewCore(opts)
-
+	err := c.Controllers.Register("mock", &mockController{})
+	if err != nil {
+		logger.Errorln(err)
+	}
 	// Зарегистрируем один компонент
-	c.Components.Register(model.Component{
-		ID:   "component-1",
-		Name: "Test Component",
-		Type: "kuber-controller",
+	_, err = c.Components.Register(model.Component{
+		ID:      "component-1",
+		Name:    "Test Component",
+		Type:    "mock",
+		Version: "1.0.0",
 	})
-
+	if err != nil {
+		logger.Errorln(err)
+	}
 	return c
 }
 
@@ -41,7 +47,7 @@ func TestRegisterTask_Success(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, registered)
-	assert.Equal(t, model.StatusPending, registered.StatusHistory.LastStatus)
+	assert.Equal(t, model.StatusCreated, registered.StatusHistory.LastStatus)
 }
 
 func TestRegisterTask_Duplicate(t *testing.T) {
@@ -74,7 +80,7 @@ func TestRegisterTask_InvalidComponent(t *testing.T) {
 	_, err := c.Tasks.Register(task)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "component with given ComponentID not found")
+	assert.EqualError(t, err, "component not found")
 }
 
 func TestRegisterTask_InvalidType(t *testing.T) {
@@ -116,7 +122,7 @@ func TestGetTask_NotFound(t *testing.T) {
 
 	_, err := c.Tasks.Get("missing")
 	assert.Error(t, err)
-	assert.EqualError(t, err, "task not found")
+	assert.EqualError(t, err, "task with ID 'missing' not found")
 }
 
 func TestUpdateTask(t *testing.T) {
@@ -143,7 +149,7 @@ func TestUpdateTask(t *testing.T) {
 
 	got, _ := c.Tasks.Get("task-1")
 	assert.Equal(t, "Updated", got.Name)
-	assert.Equal(t, model.StatusPending, got.StatusHistory.LastStatus)
+	assert.Equal(t, model.StatusCreated, got.StatusHistory.LastStatus)
 }
 
 func TestDeleteTask(t *testing.T) {
