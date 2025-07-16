@@ -53,8 +53,8 @@ func (cr *ComponentRegistry) Delete(id string) error {
 
 func (cr *ComponentRegistry) Get(id string) (*model.Component, error) {
 	cr.logger.Debugf("ComponentRegistry.Get: call(), args: id[%s]", id)
-	cr.mu.Lock()
-	defer cr.mu.Unlock()
+	cr.mu.RLock()
+	defer cr.mu.RUnlock()
 
 	comp, exists := cr.components[id]
 	if !exists {
@@ -65,8 +65,8 @@ func (cr *ComponentRegistry) Get(id string) (*model.Component, error) {
 }
 
 func (cr *ComponentRegistry) List() ([]*model.Component, error) {
-	cr.mu.Lock()
-	defer cr.mu.Unlock()
+	cr.mu.RLock()
+	defer cr.mu.RUnlock()
 
 	comps := make([]*model.Component, 0, len(cr.components))
 	for _, comp := range cr.components {
@@ -157,6 +157,7 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
 		return nil, errors.New("component already registered")
 	}
+
 	comp.StatusHistory = cr.NewStatus(model.StatusPending)
 	comp.EventHistory = &model.EventHistory{}
 	cr.AddEvent(comp.EventHistory, "Created component!")
@@ -176,6 +177,8 @@ func (cr *ComponentRegistry) Update(id string, updatedComp *model.Component) err
 		return errors.New("component not found")
 	}
 	updatedComp.ID = comp.ID // чтобы не изменить ID по ошибке
+	updatedComp.EventHistory = comp.EventHistory
+	updatedComp.StatusHistory = comp.StatusHistory
 
 	if cr.Controllers != nil {
 		err := cr.checkMeta(updatedComp.Type, updatedComp.Metadata)
