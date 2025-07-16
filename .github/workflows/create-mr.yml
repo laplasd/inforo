@@ -2,10 +2,7 @@ name: Create Merge Request
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Run Unit-Tests"]
-    types:
-      - completed
+
 
 jobs:
   check-branch-exists:
