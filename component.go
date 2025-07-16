@@ -6,11 +6,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/laplasd/inforo/model"
-
-	"github.com/laplasd/inforo/api"
-
 	"github.com/google/uuid"
+	"github.com/laplasd/inforo/api"
+	"github.com/laplasd/inforo/model"
 	"github.com/sirupsen/logrus"
 )
 
