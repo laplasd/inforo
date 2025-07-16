@@ -19,6 +19,8 @@ func (s *StatusManager) NewStatus(status model.Status) *model.StatusHistory {
 }
 
 func (s *StatusManager) NextStatus(status model.Status, history model.StatusHistory) *model.StatusHistory {
+	history.MU.Lock()
+	defer history.MU.Unlock()
 	prev := &struct {
 		Status    model.Status `json:"Status"`
 		Timestamp time.Time    `json:"Timestamp"`
