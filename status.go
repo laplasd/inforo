@@ -1,4 +1,4 @@
-package core
+package inforo
 
 import (
 	"time"

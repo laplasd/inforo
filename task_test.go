@@ -1,4 +1,4 @@
-package core_test
+package inforo_test
 
 import (
 	"laplasd/internal/core"
