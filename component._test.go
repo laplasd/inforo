@@ -46,7 +46,7 @@ func newTestCore() *inforo.Core {
 // --- tests ---
 func TestRegisterComponent_Success(t *testing.T) {
 	c := newTestCore()
-	comp := model.Component{ID: "c1", Name: "Comp1", Type: "kuber-controller", Metadata: map[string]string{}}
+	comp := model.Component{ID: "c1", Name: "Comp1", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}}
 
 	registered, err := c.Components.Register(comp)
 	assert.NoError(t, err)
