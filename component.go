@@ -160,7 +160,7 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 	}
 
 	comp.StatusHistory = cr.NewStatus(model.StatusPending)
-	comp.EventHistory = &model.EventHistory{}
+	//comp.EventHistory = &model.EventHistory{}
 	cr.AddEvent(comp.EventHistory, "Created component!")
 
 	cr.components[comp.ID] = &comp

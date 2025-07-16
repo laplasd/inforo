@@ -132,8 +132,8 @@ func (ts *TaskRegistry) Get(taskID string) (*model.Task, error) {
 }
 
 func (ts *TaskRegistry) Update(id string, updated model.Task) error {
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
+	ts.MU.Lock()
+	defer ts.MU.Unlock()
 
 	task, exists := ts.tasks[id]
 	if !exists {
@@ -173,8 +173,8 @@ func (ts *TaskRegistry) Update(id string, updated model.Task) error {
 }
 
 func (ts *TaskRegistry) Delete(id string) error {
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
+	ts.MU.Lock()
+	defer ts.MU.Unlock()
 
 	if _, exists := ts.tasks[id]; !exists {
 		return errors.New("task not found")
@@ -184,8 +184,8 @@ func (ts *TaskRegistry) Delete(id string) error {
 }
 
 func (ts *TaskRegistry) List() ([]*model.Task, error) {
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
+	ts.MU.Lock()
+	defer ts.MU.Unlock()
 
 	tasks := make([]*model.Task, 0, len(ts.tasks))
 	for _, t := range ts.tasks {
