@@ -56,7 +56,7 @@ func TestRegisterComponent_Success(t *testing.T) {
 
 func TestRegisterComponent_AlreadyRegistered(t *testing.T) {
 	c := newTestCore()
-	comp := model.Component{ID: "c1", Type: "kuber-controller", Metadata: map[string]string{}}
+	comp := model.Component{ID: "c1", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}}
 	_, _ = c.Components.Register(comp)
 	_, err := c.Components.Register(comp)
 	assert.Error(t, err)
@@ -64,14 +64,14 @@ func TestRegisterComponent_AlreadyRegistered(t *testing.T) {
 
 func TestRegisterComponent_UnsupportedType(t *testing.T) {
 	c := newTestCore()
-	comp := model.Component{ID: "bad", Type: "unknown", Metadata: map[string]string{}}
+	comp := model.Component{ID: "bad", Type: "unknown", Version: "1.0.0", Metadata: map[string]string{}}
 	_, err := c.Components.Register(comp)
 	assert.Error(t, err)
 }
 
 func TestGetComponent_Success(t *testing.T) {
 	c := newTestCore()
-	comp := model.Component{ID: "get1", Type: "kuber-controller", Metadata: map[string]string{}}
+	comp := model.Component{ID: "get1", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}}
 	got, err := c.Components.Register(comp)
 
 	assert.NoError(t, err)
@@ -86,10 +86,10 @@ func TestGetComponent_NotFound(t *testing.T) {
 
 func TestUpdateComponent_Success(t *testing.T) {
 	c := newTestCore()
-	orig := model.Component{ID: "upd1", Name: "Old", Type: "kuber-controller", Metadata: map[string]string{}}
+	orig := model.Component{ID: "upd1", Name: "Old", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}}
 	_, _ = c.Components.Register(orig)
 
-	updated := &model.Component{ID: "upd1", Name: "New", Type: "kuber-controller", Metadata: map[string]string{"foo": "bar"}}
+	updated := &model.Component{ID: "upd1", Name: "New", Type: "mock", Version: "1.0.0", Metadata: map[string]string{"foo": "bar"}}
 	err := c.Components.Update("upd1", updated)
 	res, _ := c.Components.Get(updated.ID)
 	assert.NoError(t, err)
@@ -99,14 +99,14 @@ func TestUpdateComponent_Success(t *testing.T) {
 
 func TestUpdateComponent_NotFound(t *testing.T) {
 	c := newTestCore()
-	comp := &model.Component{ID: "x", Type: "kuber-controller", Metadata: map[string]string{}}
+	comp := &model.Component{ID: "x", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}}
 	err := c.Components.Update("x", comp)
 	assert.Error(t, err)
 }
 
 func TestUpdateComponent_InvalidType(t *testing.T) {
 	c := newTestCore()
-	comp := &model.Component{ID: "x", Type: "kuber-controller", Metadata: map[string]string{}}
+	comp := &model.Component{ID: "x", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}}
 	_, _ = c.Components.Register(*comp)
 
 	comp.Type = "unknown"
@@ -116,7 +116,7 @@ func TestUpdateComponent_InvalidType(t *testing.T) {
 
 func TestDeleteComponent_Success(t *testing.T) {
 	c := newTestCore()
-	comp := model.Component{ID: "del1", Type: "kuber-controller", Metadata: map[string]string{}}
+	comp := model.Component{ID: "del1", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}}
 	_, _ = c.Components.Register(comp)
 
 	err := c.Components.Delete("del1")
@@ -131,8 +131,8 @@ func TestDeleteComponent_NotFound(t *testing.T) {
 
 func TestListComponents(t *testing.T) {
 	c := newTestCore()
-	_, _ = c.Components.Register(model.Component{ID: "a", Type: "kuber-controller", Metadata: map[string]string{}})
-	_, _ = c.Components.Register(model.Component{ID: "b", Type: "kuber-controller", Metadata: map[string]string{}})
+	_, _ = c.Components.Register(model.Component{ID: "a", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}})
+	_, _ = c.Components.Register(model.Component{ID: "b", Type: "mock", Version: "1.0.0", Metadata: map[string]string{}})
 
 	list, _ := c.Components.List()
 	assert.Len(t, list, 2)
