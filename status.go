@@ -1,6 +1,7 @@
 package inforo
 
 import (
+	"sync"
 	"time"
 
 	"github.com/laplasd/inforo/model"
@@ -13,10 +14,13 @@ func (s *StatusManager) NewStatus(status model.Status) *model.StatusHistory {
 	return &model.StatusHistory{
 		LastStatus: status,
 		Timestamp:  time.Now(),
+		MU:         sync.RWMutex{},
 	}
 }
 
-func (s *StatusManager) NextStatus(status model.Status, history model.StatusHistory) *model.StatusHistory {
+func (s *StatusManager) NextStatus(status model.Status, history *model.StatusHistory) *model.StatusHistory {
+	history.MU.Lock()
+	defer history.MU.Unlock()
 	prev := &struct {
 		Status    model.Status `json:"Status"`
 		Timestamp time.Time    `json:"Timestamp"`

@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // --- mock controller ---
@@ -136,4 +137,31 @@ func TestListComponents(t *testing.T) {
 
 	list, _ := c.Components.List()
 	assert.Len(t, list, 2)
+}
+
+func TestComponentRegistry_Register_CreatesEventHistory(t *testing.T) {
+	c := newTestCore()
+
+	// Убедимся, что контроллер для типа "mock" существует
+	//err := c.Controllers.Register("mock", &MockController{})
+	//require.NoError(t, err)
+
+	testComp := model.Component{
+		Name:     "test-component",
+		Version:  "1.0.0",
+		Type:     "mock",
+		Metadata: map[string]string{},
+	}
+
+	registeredComp, err := c.Components.Register(testComp)
+	require.NoError(t, err)
+	require.NotNil(t, registeredComp)
+
+	// Проверяем что EventHistory был создан
+	require.NotNil(t, registeredComp.EventHistory, "EventHistory should be initialized")
+	require.NotNil(t, registeredComp.EventHistory.Event, "Events slice should be initialized")
+
+	// Проверяем добавленное событие
+	assert.GreaterOrEqual(t, len(registeredComp.EventHistory.Event), 1, "Should have at least one event")
+	assert.Equal(t, "Created component!", registeredComp.EventHistory.Event[0].Message)
 }

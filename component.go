@@ -135,13 +135,6 @@ func (cr *ComponentRegistry) GetBy(key string, value string) ([]*model.Component
 func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, error) {
 	cr.logger.Debugf("ComponentRegistry.Register: call(), args: comp[%v]", comp)
 
-	cr.mu.Lock()
-	defer cr.mu.Unlock()
-
-	if _, exists := cr.components[comp.ID]; exists {
-		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
-		return nil, errors.New("component already registered")
-	}
 	if comp.ID == "" {
 		comp.ID = uuid.New().String()
 	}
@@ -158,12 +151,18 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 			return nil, err
 		}
 	}
+	cr.mu.Lock()
 
+	if _, exists := cr.components[comp.ID]; exists {
+		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
+		return nil, errors.New("component already registered")
+	}
 	comp.StatusHistory = cr.NewStatus(model.StatusPending)
-	//comp.EventHistory = &model.EventHistory{}
+	comp.EventHistory = &model.EventHistory{}
 	cr.AddEvent(comp.EventHistory, "Created component!")
 
 	cr.components[comp.ID] = &comp
+	cr.mu.Unlock()
 	cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", nil)
 	return &comp, nil
 }
@@ -197,7 +196,7 @@ func (cr *ComponentRegistry) Disable(id string) error {
 	if err != nil {
 		return err
 	}
-	comp.StatusHistory = cr.NextStatus(model.StatusDisable, *comp.StatusHistory)
+	comp.StatusHistory = cr.NextStatus(model.StatusDisable, comp.StatusHistory)
 
 	err = cr.Update(comp.ID, comp)
 	if err != nil {
@@ -212,7 +211,7 @@ func (cr *ComponentRegistry) Enable(id string) error {
 	if err != nil {
 		return err
 	}
-	comp.StatusHistory = cr.NextStatus(model.StatusPending, *comp.StatusHistory)
+	comp.StatusHistory = cr.NextStatus(model.StatusPending, comp.StatusHistory)
 
 	err = cr.Update(comp.ID, comp)
 	if err != nil {
