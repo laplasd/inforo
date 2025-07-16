@@ -123,7 +123,7 @@ func TestStatusManager_NextStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			sm := &StatusManager{}
 			before := time.Now()
-			result := sm.NextStatus(tt.newStatus, *tt.initialStatus)
+			result := sm.NextStatus(tt.newStatus, tt.initialStatus)
 			after := time.Now()
 
 			// Проверка нового статуса и времени
@@ -154,14 +154,14 @@ func TestStatusManager_ConcurrentAccess(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result := sm.NextStatus(model.StatusRunning, *initial)
+			result := sm.NextStatus(model.StatusRunning, initial)
 			assert.Equal(t, model.StatusRunning, result.LastStatus)
 		}()
 	}
 	wg.Wait()
 
 	// Проверяем что история не повредилась
-	result := sm.NextStatus(model.StatusFailed, *initial)
+	result := sm.NextStatus(model.StatusFailed, initial)
 	assert.Equal(t, model.StatusFailed, result.LastStatus)
 	assert.Equal(t, 1, len(result.Previous))
 	assert.Equal(t, model.StatusPending, result.Previous[0].Status)

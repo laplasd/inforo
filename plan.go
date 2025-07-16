@@ -223,7 +223,7 @@ func (pr *PlanRegistry) Update(id string, updated model.Plan) error {
 	}
 
 	if updated.StatusHistory.LastStatus != "" {
-		plan.StatusHistory = pr.StatusManager.NextStatus(updated.StatusHistory.LastStatus, *plan.StatusHistory)
+		plan.StatusHistory = pr.StatusManager.NextStatus(updated.StatusHistory.LastStatus, plan.StatusHistory)
 	}
 
 	pr.plans[id] = plan
@@ -294,7 +294,7 @@ func (pr *PlanRegistry) Run(planID string, executionID string) (string, error) {
 	}
 	pr.mu.Lock()
 	// Update plan status
-	plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusRunning, *plan.StatusHistory)
+	plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusRunning, plan.StatusHistory)
 	pr.plans[planID] = plan
 	pr.mu.Unlock()
 
@@ -335,10 +335,10 @@ func (pr *PlanRegistry) Run(planID string, executionID string) (string, error) {
 
 	plan = pr.plans[planID] // Перечитываем план, так как он мог измениться
 	if executionErr != nil {
-		plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusFailed, *plan.StatusHistory)
+		plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusFailed, plan.StatusHistory)
 		pr.logger.Errorf("[%s] Plan execution failed: %v", executionID, executionErr)
 	} else {
-		plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusSuccess, *plan.StatusHistory)
+		plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusSuccess, plan.StatusHistory)
 		pr.logger.Infof("[%s] Plan executed successfully", executionID)
 	}
 	pr.plans[planID] = plan
@@ -544,7 +544,7 @@ func (pr *PlanRegistry) Stop(planID string) error {
 		return fmt.Errorf("cannot stop plan in status '%s'", currentStatus)
 	}
 
-	plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusStopped, *plan.StatusHistory)
+	plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusStopped, plan.StatusHistory)
 	pr.plans[planID] = plan
 
 	// In a real implementation, you would also:
@@ -570,7 +570,7 @@ func (pr *PlanRegistry) Pause(planID string) error {
 		return fmt.Errorf("cannot pause plan in status '%s'", plan.StatusHistory.LastStatus)
 	}
 
-	plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusPaused, *plan.StatusHistory)
+	plan.StatusHistory = pr.StatusManager.NextStatus(model.StatusPaused, plan.StatusHistory)
 	pr.plans[planID] = plan
 
 	// In a real implementation, you would:

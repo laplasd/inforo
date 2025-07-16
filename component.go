@@ -197,7 +197,7 @@ func (cr *ComponentRegistry) Disable(id string) error {
 	if err != nil {
 		return err
 	}
-	comp.StatusHistory = cr.NextStatus(model.StatusDisable, *comp.StatusHistory)
+	comp.StatusHistory = cr.NextStatus(model.StatusDisable, comp.StatusHistory)
 
 	err = cr.Update(comp.ID, comp)
 	if err != nil {
@@ -212,7 +212,7 @@ func (cr *ComponentRegistry) Enable(id string) error {
 	if err != nil {
 		return err
 	}
-	comp.StatusHistory = cr.NextStatus(model.StatusPending, *comp.StatusHistory)
+	comp.StatusHistory = cr.NextStatus(model.StatusPending, comp.StatusHistory)
 
 	err = cr.Update(comp.ID, comp)
 	if err != nil {

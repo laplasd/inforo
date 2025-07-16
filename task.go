@@ -459,7 +459,7 @@ func (ts *TaskRegistry) UpdateTaskStatus(task *model.Task, status model.Status) 
 
 	// Создаем копию задачи для изменения
 	updatedTask := task
-	updatedTask.StatusHistory = ts.NextStatus(status, *task.StatusHistory)
+	updatedTask.StatusHistory = ts.NextStatus(status, task.StatusHistory)
 	ts.tasks[task.ID] = updatedTask
 	ts.logger.Debugf("TaskRegistry.updateTaskStatus() - task.ID: %s, last_status -> %s", task.ID, status)
 	return nil
