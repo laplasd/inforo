@@ -43,7 +43,7 @@ func NewPlanRegistry(opts PlanRegistryOptions) (api.PlanRegistry, error) {
 	}, nil
 }
 
-func (pr *PlanRegistry) Register(tasks []model.Task) (*model.Plan, error) {
+func (pr *PlanRegistry) Register(tasks []*model.Task) (*model.Plan, error) {
 	pr.mu.Lock()
 	defer pr.mu.Unlock()
 

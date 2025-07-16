@@ -32,7 +32,6 @@ type TaskRegistryOptions struct {
 	MonitorControllers api.MonitoringControllerRegistry
 	StatusManager      *StatusManager
 	EventManager       *Events
-	// Другие зависимости
 }
 
 func NewTaskRegistry(opts TaskRegistryOptions) (api.TaskRegistry, error) {
@@ -44,11 +43,12 @@ func NewTaskRegistry(opts TaskRegistryOptions) (api.TaskRegistry, error) {
 		MonitorControllers: opts.MonitorControllers,
 		logger:             opts.Logger,
 		StatusManager:      opts.StatusManager,
+		Events:             opts.EventManager,
 		tasks:              make(map[string]*model.Task),
 	}, nil
 }
 
-func (ts *TaskRegistry) Validate(task model.Task) error {
+func (ts *TaskRegistry) Validate(task *model.Task) error {
 	if len(task.Components) == 0 {
 		return errors.New("Components list is empty")
 	}
@@ -86,7 +86,7 @@ func (ts *TaskRegistry) Validate(task model.Task) error {
 	return nil
 }
 
-func (ts *TaskRegistry) Register(task model.Task) (*model.Task, error) {
+func (ts *TaskRegistry) Register(task *model.Task) (*model.Task, error) {
 	ts.MU.Lock()
 	defer ts.MU.Unlock()
 
@@ -131,7 +131,7 @@ func (ts *TaskRegistry) Get(taskID string) (*model.Task, error) {
 	return task, nil
 }
 
-func (ts *TaskRegistry) Update(id string, updated model.Task) error {
+func (ts *TaskRegistry) Update(id string, updated *model.Task) error {
 	ts.MU.Lock()
 	defer ts.MU.Unlock()
 

@@ -36,12 +36,12 @@ func setupCoreWithComponent() *inforo.Core {
 func TestRegisterTask_Success(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := (model.Task{
+	task := &model.Task{
 		ID:         "task-1",
 		Name:       "Test Task",
 		Type:       "update",
 		Components: []string{"component-1"},
-	})
+	}
 
 	registered, err := c.Tasks.Register(task)
 
@@ -53,7 +53,7 @@ func TestRegisterTask_Success(t *testing.T) {
 func TestRegisterTask_Duplicate(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := model.Task{
+	task := &model.Task{
 		ID:         "task-1",
 		Name:       "Test Task",
 		Type:       "update",
@@ -70,7 +70,7 @@ func TestRegisterTask_Duplicate(t *testing.T) {
 func TestRegisterTask_InvalidComponent(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := model.Task{
+	task := &model.Task{
 		ID:         "task-2",
 		Name:       "Invalid",
 		Type:       "update",
@@ -86,7 +86,7 @@ func TestRegisterTask_InvalidComponent(t *testing.T) {
 func TestRegisterTask_InvalidType(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := model.Task{
+	task := &model.Task{
 		ID:         "task-3",
 		Name:       "Bad Type",
 		Type:       "invalid-type",
@@ -102,7 +102,7 @@ func TestRegisterTask_InvalidType(t *testing.T) {
 func TestGetTask(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := model.Task{
+	task := &model.Task{
 		ID:         "task-1",
 		Name:       "Test Task",
 		Type:       "update",
@@ -128,7 +128,7 @@ func TestGetTask_NotFound(t *testing.T) {
 func TestUpdateTask(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := model.Task{
+	task := &model.Task{
 		ID:         "task-1",
 		Name:       "Original",
 		Type:       "update",
@@ -136,7 +136,7 @@ func TestUpdateTask(t *testing.T) {
 	}
 	_, _ = c.Tasks.Register(task)
 
-	updated := model.Task{
+	updated := &model.Task{
 		ID:         "task-1",
 		Name:       "Updated",
 		Type:       "update",
@@ -155,7 +155,7 @@ func TestUpdateTask(t *testing.T) {
 func TestDeleteTask(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	task := model.Task{
+	task := &model.Task{
 		ID:         "task-1",
 		Name:       "ToDelete",
 		Type:       "update",
@@ -173,7 +173,7 @@ func TestDeleteTask(t *testing.T) {
 func TestListTasks(t *testing.T) {
 	c := setupCoreWithComponent()
 
-	tasks := []model.Task{
+	tasks := []*model.Task{
 		{ID: "task-1", Name: "Task 1", Type: "update", Components: []string{"component-1"}},
 		{ID: "task-2", Name: "Task 2", Type: "check", Components: []string{"component-1"}},
 	}

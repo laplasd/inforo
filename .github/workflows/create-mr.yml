@@ -1,0 +1,68 @@
+name: Create Merge Request
+
+on:
+  workflow_dispatch:
+
+
+jobs:
+  check-branch-exists:
+    runs-on: ubuntu-latest
+    outputs:
+      branch_exists: ${{ steps.check-branch.outputs.exists }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Check if test branch exists
+      id: check-branch
+      run: |
+        if git ls-remote --exit-code --heads origin test; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+  create-merge-request:
+    needs: check-branch-exists
+    if: needs.check-branch-exists.outputs.branch_exists == 'true' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Create Merge Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: test
+        branch: auto-merge-to-test-${{ github.run_id }}
+        title: "Auto-merge: Test results successful"
+        body: "Automated merge request after successful unit tests"
+        labels: "automated"
+
+  create-branch-and-pr:
+    needs: check-branch-exists
+    if: needs.check-branch-exists.outputs.branch_exists == 'false' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Create test branch
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git checkout -b test
+        git commit --allow-empty -m "Initial test branch commit"
+        git push origin test
+    
+    - name: Create initial PR to test branch
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: test
+        branch: initial-setup-${{ github.run_id }}
+        title: "Initial setup of test branch"
+        body: "Creating test branch for future merges"
+        labels: "automated,setup"

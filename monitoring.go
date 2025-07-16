@@ -29,13 +29,16 @@ type MonitoringRegistryOptions struct {
 }
 
 func NewMonitoringRegistry(opts MonitoringRegistryOptions) (api.MonitoringRegistry, error) {
-	return &MonitoringRegistry{
+
+	mr := &MonitoringRegistry{
 		mu:                 &sync.RWMutex{},
 		logger:             opts.Logger,
 		monitorControllers: opts.Controllers,
 		StatusManager:      opts.StatusManager,
 		monitorings:        make(map[string]model.Monitoring),
-	}, nil
+	}
+	// mr.Register("promql-monitor", controllers.NewPromQLMonitorController(opts.Logger, "http://prometheus:9090/api/v1"))
+	return mr, nil
 }
 
 func (mr *MonitoringRegistry) Register(tp string, m model.Monitoring) error {
