@@ -1,6 +1,7 @@
 package inforo
 
 import (
+	"sync"
 	"time"
 
 	"github.com/laplasd/inforo/model"
@@ -13,6 +14,7 @@ func (s *StatusManager) NewStatus(status model.Status) *model.StatusHistory {
 	return &model.StatusHistory{
 		LastStatus: status,
 		Timestamp:  time.Now(),
+		MU:         sync.RWMutex{},
 	}
 }
 
