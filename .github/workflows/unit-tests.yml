@@ -12,9 +12,14 @@ on:
         required: false
         default: false
         type: boolean
+      create-mr:
+        description: 'Create Pull Request?'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -33,10 +38,13 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.out
-    
+
+  trigger-mr:
+    runs-on: ubuntu-latest
+    steps:
     - name: Trigger MR workflow on success
       uses: actions/github-script@v6
-      if: success()
+      if: ${{ inputs.create-mr }}
       with:
         script: |
           await github.rest.actions.createWorkflowDispatch({
