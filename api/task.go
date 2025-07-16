@@ -6,10 +6,10 @@ import (
 
 type TaskRegistry interface {
 	StatusProvider
-	Validate(task model.Task) error
-	Register(task model.Task) (*model.Task, error)
+	Validate(task *model.Task) error
+	Register(task *model.Task) (*model.Task, error)
 	Get(id string) (*model.Task, error)
-	Update(id string, comp model.Task) error
+	Update(id string, comp *model.Task) error
 	Delete(id string) error
 	List() ([]*model.Task, error)
 	// Process methods
