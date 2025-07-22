@@ -42,6 +42,10 @@ type MockPlanRegistry struct {
 	api.PlanRegistry
 }
 
+func NewTestDefaultCore() *inforo.Core {
+	return inforo.NewDefaultCore()
+}
+
 func TestNewNullLogger(t *testing.T) {
 	t.Run("should create logger with discard output", func(t *testing.T) {
 		logger := inforo.NewNullLogger()

@@ -2,9 +2,11 @@ package inforo
 
 import (
 	"errors"
+	"fmt"
 
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/laplasd/inforo/api"
 	"github.com/laplasd/inforo/model"
 
@@ -13,7 +15,7 @@ import (
 
 type MonitoringRegistry struct {
 	monitorControllers api.MonitoringControllerRegistry
-	monitorings        map[string]model.Monitoring
+	monitorings        map[string]*model.Monitoring
 	*StatusManager
 	*Events
 	mu     *sync.RWMutex
@@ -35,57 +37,80 @@ func NewMonitoringRegistry(opts MonitoringRegistryOptions) (api.MonitoringRegist
 		logger:             opts.Logger,
 		monitorControllers: opts.Controllers,
 		StatusManager:      opts.StatusManager,
-		monitorings:        make(map[string]model.Monitoring),
+		monitorings:        make(map[string]*model.Monitoring),
 	}
 	// mr.Register("promql-monitor", controllers.NewPromQLMonitorController(opts.Logger, "http://prometheus:9090/api/v1"))
 	return mr, nil
 }
 
-func (mr *MonitoringRegistry) Register(tp string, m model.Monitoring) error {
+func (mr *MonitoringRegistry) Register(tp string, m *model.Monitoring) (*model.Monitoring, error) {
+	mr.logger.Debugf("ComponentRegistry.Register: call(), args: m[%v]", m)
+
+	if m.ID == "" {
+		m.ID = uuid.New().String()
+	}
+
+	if mr.monitorControllers != nil {
+		mr.logger.Infof("MonitoringRegistry.Register: check 'metaData'")
+		err := mr.CheckConfig(m.Type, m.Config)
+		if err != nil {
+			mr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", err)
+			return nil, err
+		}
+	}
+
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
 	if _, exists := mr.monitorings[m.ID]; exists {
-		return errors.New("monitoring system already registered")
-	}
-
-	controller, err := mr.monitorControllers.Get(m.Type)
-	if err != nil {
-		return err
-	}
-
-	err = controller.ValidateMonitoring(m.Config)
-	if err != nil {
-		return err
+		return nil, errors.New("monitoring system already registered")
 	}
 
 	m.StatusHistory = mr.NewStatus(model.StatusPending)
+	m.EventHistory = &model.EventHistory{}
+	mr.AddEvent(m.EventHistory, "Created monitoring!")
+
+	m.StatusHistory = mr.NewStatus(model.StatusPending)
 	mr.monitorings[m.ID] = m
-	return nil
+	return m, nil
 }
 
-func (mr *MonitoringRegistry) Get(id string) (model.Monitoring, error) {
-	mr.mu.Lock()
-	defer mr.mu.Unlock()
+func (mr *MonitoringRegistry) Get(id string) (*model.Monitoring, error) {
+	mr.mu.RLock()
+	defer mr.mu.RUnlock()
 
 	m, ok := mr.monitorings[id]
 	if !ok {
-		return model.Monitoring{}, errors.New("monitoring system not found")
+		return nil, errors.New("monitoring system not found")
 	}
 
 	return m, nil
 }
 
-func (mr *MonitoringRegistry) Update(id string, updated model.Monitoring) error {
+func (mr *MonitoringRegistry) Update(id string, updated *model.Monitoring) error {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
-	if _, exists := mr.monitorings[id]; !exists {
+	m, exists := mr.monitorings[id]
+	if !exists {
 		return errors.New("monitoring system not found")
 	}
 
 	updated.ID = id // не позволяем изменить ID
+	updated.EventHistory = m.EventHistory
+	updated.StatusHistory = m.StatusHistory
+
+	if mr.monitorControllers != nil {
+		mr.logger.Infof("MonitoringRegistry.Register: check 'metaData'")
+		err := mr.CheckConfig(m.Type, m.Config)
+		if err != nil {
+			mr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", err)
+			return err
+		}
+	}
+
 	mr.monitorings[id] = updated
+	mr.logger.Infof("Monitoring %s updated", id)
 	return nil
 }
 
@@ -101,14 +126,36 @@ func (mr *MonitoringRegistry) Delete(id string) error {
 	return nil
 }
 
-func (mr *MonitoringRegistry) List() ([]model.Monitoring, error) {
-	mr.mu.Lock()
-	defer mr.mu.Unlock()
+func (mr *MonitoringRegistry) List() ([]*model.Monitoring, error) {
+	mr.mu.RLock()
+	defer mr.mu.RUnlock()
 
-	result := make([]model.Monitoring, 0, len(mr.monitorings))
+	result := make([]*model.Monitoring, 0, len(mr.monitorings))
 	for _, m := range mr.monitorings {
 		result = append(result, m)
 	}
 
 	return result, nil
+}
+
+func (mr *MonitoringRegistry) CheckConfig(compType string, compConfig map[string]string) error {
+
+	if mr.monitorControllers == nil {
+		return fmt.Errorf("monitorControllers is 'nil'!") // или возвращаем ошибку, если требуется валидация
+	}
+
+	controller, err := mr.monitorControllers.Get(compType)
+	if err != nil {
+		return err
+	}
+
+	if controller == nil {
+		return fmt.Errorf("controller is 'nil'!") // или возвращаем ошибку, если требуется валидация
+	}
+
+	err = controller.ValidateMonitoring(compConfig)
+	if err != nil {
+		return err
+	}
+	return nil
 }
