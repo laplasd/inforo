@@ -2,6 +2,7 @@ package inforo
 
 import (
 	"errors"
+	"fmt"
 
 	"sync"
 
@@ -51,7 +52,7 @@ func (mr *MonitoringRegistry) Register(tp string, m *model.Monitoring) (*model.M
 
 	if mr.monitorControllers != nil {
 		mr.logger.Infof("MonitoringRegistry.Register: check 'metaData'")
-		err := mr.checkConfig(m.Type, m.Config)
+		err := mr.CheckConfig(m.Type, m.Config)
 		if err != nil {
 			mr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", err)
 			return nil, err
@@ -90,12 +91,26 @@ func (mr *MonitoringRegistry) Update(id string, updated *model.Monitoring) error
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
-	if _, exists := mr.monitorings[id]; !exists {
+	m, exists := mr.monitorings[id]
+	if !exists {
 		return errors.New("monitoring system not found")
 	}
 
 	updated.ID = id // не позволяем изменить ID
+	updated.EventHistory = m.EventHistory
+	updated.StatusHistory = m.StatusHistory
+
+	if mr.monitorControllers != nil {
+		mr.logger.Infof("MonitoringRegistry.Register: check 'metaData'")
+		err := mr.CheckConfig(m.Type, m.Config)
+		if err != nil {
+			mr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", err)
+			return err
+		}
+	}
+
 	mr.monitorings[id] = updated
+	mr.logger.Infof("Monitoring %s updated", id)
 	return nil
 }
 
@@ -123,11 +138,19 @@ func (mr *MonitoringRegistry) List() ([]*model.Monitoring, error) {
 	return result, nil
 }
 
-func (mr *MonitoringRegistry) checkConfig(compType string, compConfig map[string]string) error {
+func (mr *MonitoringRegistry) CheckConfig(compType string, compConfig map[string]string) error {
+
+	if mr.monitorControllers == nil {
+		return fmt.Errorf("monitorControllers is 'nil'!") // или возвращаем ошибку, если требуется валидация
+	}
 
 	controller, err := mr.monitorControllers.Get(compType)
 	if err != nil {
 		return err
+	}
+
+	if controller == nil {
+		return fmt.Errorf("controller is 'nil'!") // или возвращаем ошибку, если требуется валидация
 	}
 
 	err = controller.ValidateMonitoring(compConfig)
