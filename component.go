@@ -139,6 +139,11 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 		comp.ID = uuid.New().String()
 	}
 
+	if _, exists := cr.components[comp.ID]; exists {
+		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
+		return nil, errors.New("component already registered")
+	}
+
 	if comp.Version == "" {
 		return nil, errors.New("component version is empty")
 	}
@@ -152,11 +157,6 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 		}
 	}
 	cr.mu.Lock()
-
-	if _, exists := cr.components[comp.ID]; exists {
-		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
-		return nil, errors.New("component already registered")
-	}
 
 	comp.StatusHistory = cr.NewStatus(model.StatusPending)
 	comp.EventHistory = &model.EventHistory{}
