@@ -144,10 +144,10 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 	}
 
 	if cr.Controllers != nil {
-		cr.logger.Infof("ComponentRegistry.Register: check 'metaData'")
+		cr.logger.Infof("ComponentRegistry.Register: check 'MetaData'")
 		err := cr.checkMeta(comp.Type, comp.Metadata)
 		if err != nil {
-			cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", err)
+			cr.logger.Errorf("ComponentRegistry.Register: return(error) -> '%v'", err)
 			return nil, err
 		}
 	}
@@ -230,11 +230,13 @@ func (cr *ComponentRegistry) UpVersion(componentID string, version string) {
 
 func (cr *ComponentRegistry) checkMeta(compType string, compMeta map[string]string) error {
 
+	cr.logger.Debugf("ComponentRegistry.checkMeta: Controllers.Get(), args: compType[%v]", compType)
 	controller, err := cr.Controllers.Get(compType)
 	if err != nil {
 		return err
 	}
 
+	cr.logger.Debugf("ComponentRegistry.checkMeta: controller.ValideComponent(), args: compMeta[%v]", compMeta)
 	err = controller.ValideComponent(compMeta)
 	if err != nil {
 		return err
