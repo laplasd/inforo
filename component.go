@@ -139,6 +139,7 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 		comp.ID = uuid.New().String()
 	}
 	cr.mu.Lock()
+	defer cr.mu.Unlock()
 	if _, exists := cr.components[comp.ID]; exists {
 		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
 		return nil, errors.New("component already registered")
@@ -162,7 +163,7 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 	cr.AddEvent(comp.EventHistory, "Created component!")
 
 	cr.components[comp.ID] = &comp
-	cr.mu.Unlock()
+
 	cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", nil)
 	return &comp, nil
 }
