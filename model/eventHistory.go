@@ -11,6 +11,6 @@ type Event struct {
 }
 
 type EventHistory struct {
-	MU    sync.Mutex `json:"-"`
+	MU    sync.RWMutex `json:"-"`
 	Event []Event
 }

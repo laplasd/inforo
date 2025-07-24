@@ -138,24 +138,24 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 	if comp.ID == "" {
 		comp.ID = uuid.New().String()
 	}
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+	if _, exists := cr.components[comp.ID]; exists {
+		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
+		return nil, errors.New("component already registered")
+	}
 
 	if comp.Version == "" {
 		return nil, errors.New("component version is empty")
 	}
 
 	if cr.Controllers != nil {
-		cr.logger.Infof("ComponentRegistry.Register: check 'metaData'")
+		cr.logger.Infof("ComponentRegistry.Register: check 'MetaData'")
 		err := cr.checkMeta(comp.Type, comp.Metadata)
 		if err != nil {
-			cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", err)
+			cr.logger.Errorf("ComponentRegistry.Register: return(error) -> '%v'", err)
 			return nil, err
 		}
-	}
-	cr.mu.Lock()
-
-	if _, exists := cr.components[comp.ID]; exists {
-		cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", errors.New("component already registered"))
-		return nil, errors.New("component already registered")
 	}
 
 	comp.StatusHistory = cr.NewStatus(model.StatusPending)
@@ -163,7 +163,7 @@ func (cr *ComponentRegistry) Register(comp model.Component) (*model.Component, e
 	cr.AddEvent(comp.EventHistory, "Created component!")
 
 	cr.components[comp.ID] = &comp
-	cr.mu.Unlock()
+
 	cr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", nil)
 	return &comp, nil
 }
@@ -230,11 +230,13 @@ func (cr *ComponentRegistry) UpVersion(componentID string, version string) {
 
 func (cr *ComponentRegistry) checkMeta(compType string, compMeta map[string]string) error {
 
+	cr.logger.Debugf("ComponentRegistry.checkMeta: Controllers.Get(), args: compType[%v]", compType)
 	controller, err := cr.Controllers.Get(compType)
 	if err != nil {
 		return err
 	}
 
+	cr.logger.Debugf("ComponentRegistry.checkMeta: controller.ValideComponent(), args: compMeta[%v]", compMeta)
 	err = controller.ValideComponent(compMeta)
 	if err != nil {
 		return err

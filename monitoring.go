@@ -44,7 +44,7 @@ func NewMonitoringRegistry(opts MonitoringRegistryOptions) (api.MonitoringRegist
 }
 
 func (mr *MonitoringRegistry) Register(tp string, m *model.Monitoring) (*model.Monitoring, error) {
-	mr.logger.Debugf("ComponentRegistry.Register: call(), args: m[%v]", m)
+	mr.logger.Debugf("MonitoringRegistry.Register: call(), args: m[%v]", m)
 
 	if m.ID == "" {
 		m.ID = uuid.New().String()
@@ -54,7 +54,7 @@ func (mr *MonitoringRegistry) Register(tp string, m *model.Monitoring) (*model.M
 		mr.logger.Infof("MonitoringRegistry.Register: check 'metaData'")
 		err := mr.CheckConfig(m.Type, m.Config)
 		if err != nil {
-			mr.logger.Debugf("ComponentRegistry.Register: return(error) -> '%v'", err)
+			mr.logger.Debugf("MonitoringRegistry.Register: return(error) -> '%v'", err)
 			return nil, err
 		}
 	}
