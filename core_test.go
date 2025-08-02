@@ -1,8 +1,11 @@
 package inforo_test
 
 import (
+	"bytes"
 	"io"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/laplasd/inforo"
 	"github.com/laplasd/inforo/api"
@@ -10,6 +13,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+type MockLogger struct {
+	mock.Mock
+}
+
+func (m *MockLogger) Warn(args ...interface{}) {
+	m.Called(args...)
+}
 
 // Mock registries for testing
 type MockComponentRegistry struct {
@@ -43,7 +54,19 @@ type MockPlanRegistry struct {
 }
 
 func NewTestDefaultCore() *inforo.Core {
-	return inforo.NewDefaultCore()
+	opts := inforo.DefaultOpts(inforo.CoreOptions{
+		Logger: NewTestLogger(), // Используем специальный логгер для тестов
+	})
+	return inforo.NewCore(opts)
+}
+
+func NewTestLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel) // Включаем все уровни для тестов
+	logger.Formatter = &logrus.TextFormatter{
+		DisableTimestamp: true, // Упрощаем проверку
+	}
+	return logger
 }
 
 func TestNewNullLogger(t *testing.T) {
@@ -211,4 +234,214 @@ func TestDefaultOpts(t *testing.T) {
 			tt.validate(t, result)
 		})
 	}
+}
+
+func TestCore_EventSystem(t *testing.T) {
+	t.Run("should emit and receive events", func(t *testing.T) {
+		core := NewTestDefaultCore()
+		eventChan := core.Subscribe()
+
+		testEvent := inforo.Event{
+			Type:    "TestEvent",
+			Payload: "test payload",
+		}
+
+		core.EmitEvent(testEvent)
+
+		select {
+		case received := <-eventChan:
+			assert.Equal(t, testEvent.Type, received.Type)
+			assert.Equal(t, testEvent.Payload, received.Payload)
+		case <-time.After(100 * time.Millisecond):
+			assert.Fail(t, "Event not received")
+		}
+	})
+
+	t.Run("should handle event overflow", func(t *testing.T) {
+		// 1. Создаем ядро с очень маленьким буфером
+		core := NewTestDefaultCore()
+
+		// 2. Перенаправляем вывод в буфер
+		var buf bytes.Buffer
+		core.Logger.SetOutput(&buf)
+
+		// 4. Вызываем переполнение
+		for i := 0; i < 101; i++ {
+			core.EmitEvent(inforo.Event{Type: "Test"})
+		}
+
+		// 5. Даём время на обработку
+		time.Sleep(10 * time.Millisecond)
+
+		// 6. Проверяем логи
+		logOutput := buf.String()
+		assert.Contains(t, logOutput, "level=warning msg=\"Event stream overflow, event dropped\"",
+			"Expected overflow message in logs. Got: %s", logOutput)
+	})
+
+	t.Run("should support multiple subscribers", func(t *testing.T) {
+		core := NewTestDefaultCore()
+		sub1 := core.Subscribe()
+		sub2 := core.Subscribe()
+
+		testEvent := inforo.Event{Type: "MultiSubscriber"}
+		core.EmitEvent(testEvent)
+
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		compareEvent := func(expected, actual inforo.Event) {
+			assert.Equal(t, expected.Type, actual.Type)
+			assert.Equal(t, expected.Payload, actual.Payload)
+			assert.Equal(t, expected.Origin, actual.Origin)
+			// Поле Timestamp игнорируем
+		}
+
+		go func() {
+			defer wg.Done()
+			compareEvent(testEvent, <-sub1)
+		}()
+
+		go func() {
+			defer wg.Done()
+			compareEvent(testEvent, <-sub2)
+		}()
+
+		wg.Wait()
+	})
+}
+
+func TestCore_EventFiltering(t *testing.T) {
+	t.Run("should filter events by type", func(t *testing.T) {
+		core := NewTestDefaultCore()
+		filteredChan := core.Subscribe("TypeA", "TypeB")
+
+		typeAEvent := inforo.Event{Type: "TypeA", Payload: "A"}
+		typeBEvent := inforo.Event{Type: "TypeB", Payload: "B"}
+		typeCEvent := inforo.Event{Type: "TypeC", Payload: "C"}
+
+		core.EmitEvent(typeAEvent)
+		core.EmitEvent(typeBEvent)
+		core.EmitEvent(typeCEvent)
+
+		received := make([]inforo.Event, 0)
+		timeout := time.After(500 * time.Millisecond)
+
+		for i := 0; i < 2; i++ {
+			select {
+			case e := <-filteredChan:
+				received = append(received, e)
+			case <-timeout:
+				break
+			}
+		}
+
+		assert.Len(t, received, 2)
+
+		// Сравниваем только Type и Payload, игнорируя Timestamp
+		containsEvent := func(events []inforo.Event, want inforo.Event) bool {
+			for _, e := range events {
+				if e.Type == want.Type && e.Payload == want.Payload {
+					return true
+				}
+			}
+			return false
+		}
+
+		assert.True(t, containsEvent(received, typeAEvent), "Expected event TypeA not found")
+		assert.True(t, containsEvent(received, typeBEvent), "Expected event TypeB not found")
+		assert.False(t, containsEvent(received, typeCEvent), "Unexpected event TypeC found")
+	})
+
+	t.Run("should handle event handlers", func(t *testing.T) {
+		core := NewTestDefaultCore()
+		var handlerCalled bool
+
+		core.On("CustomEvent", func(e inforo.Event) {
+			handlerCalled = true
+			assert.Equal(t, "CustomEvent", e.Type)
+			assert.Equal(t, "data", e.Payload)
+		})
+
+		core.EmitEvent(inforo.Event{
+			Type:    "CustomEvent",
+			Payload: "data",
+		})
+
+		// Даем время на обработку
+		time.Sleep(10 * time.Millisecond)
+		assert.True(t, handlerCalled)
+	})
+}
+
+func TestCore_Shutdown(t *testing.T) {
+	t.Run("should close subscriber channels on shutdown", func(t *testing.T) {
+		core := NewTestDefaultCore()
+		sub := core.Subscribe()
+
+		go func() {
+			time.Sleep(5 * time.Millisecond)
+			core.Shutdown()
+		}()
+
+		// Канал должен закрыться
+		_, ok := <-sub
+		assert.False(t, ok)
+	})
+}
+
+func TestCore_ConcurrentEvents(t *testing.T) {
+	t.Run("should handle concurrent event emission", func(t *testing.T) {
+		core := NewTestDefaultCore()
+		eventChan := core.Subscribe()
+
+		var wg sync.WaitGroup
+		count := 80
+
+		wg.Add(count)
+		for i := 0; i < count; i++ {
+			go func(n int) {
+				defer wg.Done()
+				core.EmitEvent(inforo.Event{
+					Type:    "Concurrent",
+					Payload: n,
+				})
+			}(i)
+		}
+
+		wg.Wait()
+
+		received := make(map[int]bool)
+		for i := 0; i < count; i++ {
+			select {
+			case e := <-eventChan:
+				received[e.Payload.(int)] = true
+			case <-time.After(500 * time.Millisecond):
+				break
+			}
+		}
+
+		assert.Len(t, received, count)
+		for i := 0; i < count; i++ {
+			assert.True(t, received[i])
+		}
+	})
+}
+
+func TestCore_EventTimestamps(t *testing.T) {
+	t.Run("should set proper timestamps", func(t *testing.T) {
+		core := NewTestDefaultCore()
+		eventChan := core.Subscribe()
+
+		before := time.Now()
+		core.EmitEvent(inforo.Event{Type: "TimestampTest"})
+		time.Sleep(5 * time.Millisecond)
+		select {
+		case e := <-eventChan:
+			assert.True(t, e.Timestamp.After(before) || e.Timestamp.Equal(before))
+			assert.True(t, e.Timestamp.Before(time.Now()))
+		case <-time.After(100 * time.Millisecond):
+			assert.Fail(t, "Event not received")
+		}
+	})
 }

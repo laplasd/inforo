@@ -10,7 +10,10 @@
 package inforo
 
 import (
+	"context"
 	"io"
+	"sync"
+	"time"
 
 	"github.com/laplasd/inforo/api"
 	"github.com/laplasd/inforo/hlc"
@@ -19,17 +22,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type HybridLogicalClock struct {
-	physical uint64
-	logical  uint64
-	nodeID   string
+type Event struct {
+	Type      string
+	Payload   interface{}
+	Timestamp time.Time
+	Origin    string
 }
 
 // Core represents the central orchestrator that manages all system operations.
 // It contains registries for different system aspects and coordinates their interactions.
 type Core struct {
-	Logger             *logrus.Logger // Central logger instance
-	quantumClock       *hlc.HLC
+	Logger        *logrus.Logger // Central logger instance
+	quantumClock  *hlc.HLC
+	eventStream   chan Event
+	subscribers   []chan Event
+	shutdownChan  chan struct{}
+	eventHandlers map[string][]func(Event) // Тип события -> обработчики
+	reactiveMu    sync.RWMutex
+
+	// V1 Core
 	Components         api.ComponentRegistry            // Registry for system components
 	Controllers        api.ControllerRegistry           // Registry for component controllers
 	Monitorings        api.MonitoringRegistry           // Registry for monitoring systems
@@ -73,6 +84,8 @@ func NewDefaultCore() *Core {
 	c := &Core{
 		Logger:             opts.Logger,
 		quantumClock:       hlc.NewHLC(),
+		eventStream:        make(chan Event, 100),
+		eventHandlers:      make(map[string][]func(Event)),
 		Components:         opts.Components,
 		Controllers:        opts.Controllers,
 		Monitorings:        opts.Monitorings,
@@ -80,6 +93,7 @@ func NewDefaultCore() *Core {
 		Tasks:              opts.Tasks,
 		Plans:              opts.Plans,
 	}
+	go c.eventLoop(context.Background())
 	return c
 }
 
@@ -96,6 +110,9 @@ func NewCore(opt CoreOptions) *Core {
 
 	c := &Core{
 		Logger:             opts.Logger,
+		quantumClock:       hlc.NewHLC(),
+		eventStream:        make(chan Event, 100),
+		eventHandlers:      make(map[string][]func(Event)),
 		Components:         opts.Components,
 		Controllers:        opts.Controllers,
 		Monitorings:        opts.Monitorings,
@@ -103,6 +120,7 @@ func NewCore(opt CoreOptions) *Core {
 		Tasks:              opts.Tasks,
 		Plans:              opts.Plans,
 	}
+	go c.eventLoop(context.Background())
 	return c
 }
 
@@ -164,6 +182,111 @@ func DefaultOpts(opt CoreOptions) CoreOptions {
 		opt.Plans, _ = NewPlanRegistry(planOpts)
 	}
 	return opt
+}
+
+// Основной цикл обработки событий
+func (c *Core) eventLoop(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-c.shutdownChan:
+			return
+		case event := <-c.eventStream:
+			c.dispatchEvent(event)
+		}
+	}
+}
+
+func (c *Core) dispatchEvent(event Event) {
+	c.reactiveMu.RLock()
+	defer c.reactiveMu.RUnlock()
+
+	// 1. Отправка всем подписчикам без фильтра
+	for _, sub := range c.subscribers {
+		select {
+		case sub <- event:
+		default:
+			c.Logger.Warn("Subscriber channel full, event dropped")
+		}
+	}
+
+	// 2. Вызов специфичных обработчиков
+	if handlers, exists := c.eventHandlers[event.Type]; exists {
+		for _, handler := range handlers {
+			go handler(event) // Асинхронный вызов
+		}
+	}
+}
+
+func (nc *Core) broadcastEvent(event Event) {
+	nc.reactiveMu.RLock()
+	defer nc.reactiveMu.RUnlock()
+
+	for _, sub := range nc.subscribers {
+		select {
+		case sub <- event:
+		default:
+			// Пропускаем если подписчик не готов
+		}
+	}
+}
+
+func (c *Core) Subscribe(eventTypes ...string) <-chan Event {
+	c.reactiveMu.Lock()
+	defer c.reactiveMu.Unlock()
+
+	ch := make(chan Event, 100)
+	c.subscribers = append(c.subscribers, ch)
+
+	// Если указаны конкретные типы, сохраняем их для оптимизации маршрутизации
+	if len(eventTypes) > 0 {
+		for _, t := range eventTypes {
+			c.eventHandlers[t] = append(c.eventHandlers[t], func(e Event) {
+				ch <- e
+			})
+		}
+	}
+
+	return ch
+}
+
+// Event API
+func (c *Core) EmitEvent(event Event) {
+	event.Timestamp = c.quantumClock.Now()
+	select {
+	case c.eventStream <- event:
+	default:
+		c.Logger.Warn("Event stream overflow, event dropped")
+	}
+}
+
+func (c *Core) On(eventType string, handler func(Event)) {
+	c.reactiveMu.Lock()
+	defer c.reactiveMu.Unlock()
+
+	c.eventHandlers[eventType] = append(c.eventHandlers[eventType], handler)
+}
+
+// Graceful shutdown
+func (c *Core) Shutdown() {
+	c.reactiveMu.Lock()
+	defer c.reactiveMu.Unlock()
+
+	// 1. Закрываем shutdownChan (если он существует)
+	if c.shutdownChan != nil {
+		close(c.shutdownChan)
+	}
+
+	// 2. Закрываем каналы подписчиков
+	for _, sub := range c.subscribers {
+		if sub != nil {
+			close(sub)
+		}
+	}
+
+	// 3. Очищаем подписчиков
+	c.subscribers = nil
 }
 
 // isValidTaskType checks if a task type is valid and supported by the system.
