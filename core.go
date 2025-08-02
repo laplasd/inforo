@@ -13,15 +13,23 @@ import (
 	"io"
 
 	"github.com/laplasd/inforo/api"
+	"github.com/laplasd/inforo/hlc"
 	"github.com/laplasd/inforo/model"
 
 	"github.com/sirupsen/logrus"
 )
 
+type HybridLogicalClock struct {
+	physical uint64
+	logical  uint64
+	nodeID   string
+}
+
 // Core represents the central orchestrator that manages all system operations.
 // It contains registries for different system aspects and coordinates their interactions.
 type Core struct {
-	Logger             *logrus.Logger                   // Central logger instance
+	Logger             *logrus.Logger // Central logger instance
+	quantumClock       *hlc.HLC
 	Components         api.ComponentRegistry            // Registry for system components
 	Controllers        api.ControllerRegistry           // Registry for component controllers
 	Monitorings        api.MonitoringRegistry           // Registry for monitoring systems
@@ -33,7 +41,8 @@ type Core struct {
 // CoreOptions provides configuration options for initializing a Core instance.
 // All fields are optional - nil values will be replaced with default implementations.
 type CoreOptions struct {
-	Logger             *logrus.Logger                   `json:"Logger"`             // Custom logger instance
+	Logger *logrus.Logger `json:"Logger"` // Custom logger instance
+
 	Components         api.ComponentRegistry            `json:"Components"`         // Custom component registry
 	Controllers        api.ControllerRegistry           `json:"Controllers"`        // Custom controller registry
 	Monitorings        api.MonitoringRegistry           `json:"Monitorings"`        // Custom monitoring registry
@@ -63,6 +72,7 @@ func NewDefaultCore() *Core {
 
 	c := &Core{
 		Logger:             opts.Logger,
+		quantumClock:       hlc.NewHLC(),
 		Components:         opts.Components,
 		Controllers:        opts.Controllers,
 		Monitorings:        opts.Monitorings,
