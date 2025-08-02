@@ -13,8 +13,8 @@ import (
 	"context"
 	"io"
 	"sync"
-	"time"
 
+	"github.com/laplasd/inforo/actors"
 	"github.com/laplasd/inforo/api"
 	"github.com/laplasd/inforo/hlc"
 	"github.com/laplasd/inforo/model"
@@ -22,23 +22,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Event struct {
-	Type      string
-	Payload   interface{}
-	Timestamp time.Time
-	Origin    string
-}
-
 // Core represents the central orchestrator that manages all system operations.
 // It contains registries for different system aspects and coordinates their interactions.
 type Core struct {
-	Logger        *logrus.Logger // Central logger instance
-	quantumClock  *hlc.HLC
-	eventStream   chan Event
-	subscribers   []chan Event
+	Logger *logrus.Logger // Central logger instance
+	//HLC
+	quantumClock *hlc.HLC
+	// Events
+	eventStream   chan model.StreamEvent
+	subscribers   []chan model.StreamEvent
 	shutdownChan  chan struct{}
-	eventHandlers map[string][]func(Event) // Тип события -> обработчики
+	eventHandlers map[string][]func(model.StreamEvent) // Тип события -> обработчики
 	reactiveMu    sync.RWMutex
+	// Actors
+	actorSystem *actors.ActorSystem
+	supervisor  *actors.Supervisor
 
 	// V1 Core
 	Components         api.ComponentRegistry            // Registry for system components
@@ -84,8 +82,8 @@ func NewDefaultCore() *Core {
 	c := &Core{
 		Logger:             opts.Logger,
 		quantumClock:       hlc.NewHLC(),
-		eventStream:        make(chan Event, 100),
-		eventHandlers:      make(map[string][]func(Event)),
+		eventStream:        make(chan model.StreamEvent, 100),
+		eventHandlers:      make(map[string][]func(model.StreamEvent)),
 		Components:         opts.Components,
 		Controllers:        opts.Controllers,
 		Monitorings:        opts.Monitorings,
@@ -93,6 +91,8 @@ func NewDefaultCore() *Core {
 		Tasks:              opts.Tasks,
 		Plans:              opts.Plans,
 	}
+	c.supervisor = actors.NewSupervisor(c.Logger)
+	c.actorSystem = actors.NewActorSystem(c.Logger)
 	go c.eventLoop(context.Background())
 	return c
 }
@@ -111,8 +111,8 @@ func NewCore(opt CoreOptions) *Core {
 	c := &Core{
 		Logger:             opts.Logger,
 		quantumClock:       hlc.NewHLC(),
-		eventStream:        make(chan Event, 100),
-		eventHandlers:      make(map[string][]func(Event)),
+		eventStream:        make(chan model.StreamEvent, 100),
+		eventHandlers:      make(map[string][]func(model.StreamEvent)),
 		Components:         opts.Components,
 		Controllers:        opts.Controllers,
 		Monitorings:        opts.Monitorings,
@@ -120,6 +120,8 @@ func NewCore(opt CoreOptions) *Core {
 		Tasks:              opts.Tasks,
 		Plans:              opts.Plans,
 	}
+	c.supervisor = actors.NewSupervisor(c.Logger)
+	c.actorSystem = actors.NewActorSystem(c.Logger)
 	go c.eventLoop(context.Background())
 	return c
 }
@@ -198,7 +200,7 @@ func (c *Core) eventLoop(ctx context.Context) {
 	}
 }
 
-func (c *Core) dispatchEvent(event Event) {
+func (c *Core) dispatchEvent(event model.StreamEvent) {
 	c.reactiveMu.RLock()
 	defer c.reactiveMu.RUnlock()
 
@@ -219,7 +221,7 @@ func (c *Core) dispatchEvent(event Event) {
 	}
 }
 
-func (nc *Core) broadcastEvent(event Event) {
+func (nc *Core) broadcastEvent(event model.StreamEvent) {
 	nc.reactiveMu.RLock()
 	defer nc.reactiveMu.RUnlock()
 
@@ -232,17 +234,17 @@ func (nc *Core) broadcastEvent(event Event) {
 	}
 }
 
-func (c *Core) Subscribe(eventTypes ...string) <-chan Event {
+func (c *Core) Subscribe(eventTypes ...string) <-chan model.StreamEvent {
 	c.reactiveMu.Lock()
 	defer c.reactiveMu.Unlock()
 
-	ch := make(chan Event, 100)
+	ch := make(chan model.StreamEvent, 100)
 	c.subscribers = append(c.subscribers, ch)
 
 	// Если указаны конкретные типы, сохраняем их для оптимизации маршрутизации
 	if len(eventTypes) > 0 {
 		for _, t := range eventTypes {
-			c.eventHandlers[t] = append(c.eventHandlers[t], func(e Event) {
+			c.eventHandlers[t] = append(c.eventHandlers[t], func(e model.StreamEvent) {
 				ch <- e
 			})
 		}
@@ -252,7 +254,7 @@ func (c *Core) Subscribe(eventTypes ...string) <-chan Event {
 }
 
 // Event API
-func (c *Core) EmitEvent(event Event) {
+func (c *Core) EmitEvent(event model.StreamEvent) {
 	event.Timestamp = c.quantumClock.Now()
 	select {
 	case c.eventStream <- event:
@@ -261,7 +263,7 @@ func (c *Core) EmitEvent(event Event) {
 	}
 }
 
-func (c *Core) On(eventType string, handler func(Event)) {
+func (c *Core) On(eventType string, handler func(model.StreamEvent)) {
 	c.reactiveMu.Lock()
 	defer c.reactiveMu.Unlock()
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/laplasd/inforo"
 	"github.com/laplasd/inforo/api"
+	"github.com/laplasd/inforo/model"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -241,7 +242,7 @@ func TestCore_EventSystem(t *testing.T) {
 		core := NewTestDefaultCore()
 		eventChan := core.Subscribe()
 
-		testEvent := inforo.Event{
+		testEvent := model.StreamEvent{
 			Type:    "TestEvent",
 			Payload: "test payload",
 		}
@@ -267,7 +268,7 @@ func TestCore_EventSystem(t *testing.T) {
 
 		// 4. Вызываем переполнение
 		for i := 0; i < 101; i++ {
-			core.EmitEvent(inforo.Event{Type: "Test"})
+			core.EmitEvent(model.StreamEvent{Type: "Test"})
 		}
 
 		// 5. Даём время на обработку
@@ -284,13 +285,13 @@ func TestCore_EventSystem(t *testing.T) {
 		sub1 := core.Subscribe()
 		sub2 := core.Subscribe()
 
-		testEvent := inforo.Event{Type: "MultiSubscriber"}
+		testEvent := model.StreamEvent{Type: "MultiSubscriber"}
 		core.EmitEvent(testEvent)
 
 		var wg sync.WaitGroup
 		wg.Add(2)
 
-		compareEvent := func(expected, actual inforo.Event) {
+		compareEvent := func(expected, actual model.StreamEvent) {
 			assert.Equal(t, expected.Type, actual.Type)
 			assert.Equal(t, expected.Payload, actual.Payload)
 			assert.Equal(t, expected.Origin, actual.Origin)
@@ -316,15 +317,15 @@ func TestCore_EventFiltering(t *testing.T) {
 		core := NewTestDefaultCore()
 		filteredChan := core.Subscribe("TypeA", "TypeB")
 
-		typeAEvent := inforo.Event{Type: "TypeA", Payload: "A"}
-		typeBEvent := inforo.Event{Type: "TypeB", Payload: "B"}
-		typeCEvent := inforo.Event{Type: "TypeC", Payload: "C"}
+		typeAEvent := model.StreamEvent{Type: "TypeA", Payload: "A"}
+		typeBEvent := model.StreamEvent{Type: "TypeB", Payload: "B"}
+		typeCEvent := model.StreamEvent{Type: "TypeC", Payload: "C"}
 
 		core.EmitEvent(typeAEvent)
 		core.EmitEvent(typeBEvent)
 		core.EmitEvent(typeCEvent)
 
-		received := make([]inforo.Event, 0)
+		received := make([]model.StreamEvent, 0)
 		timeout := time.After(500 * time.Millisecond)
 
 		for i := 0; i < 2; i++ {
@@ -339,7 +340,7 @@ func TestCore_EventFiltering(t *testing.T) {
 		assert.Len(t, received, 2)
 
 		// Сравниваем только Type и Payload, игнорируя Timestamp
-		containsEvent := func(events []inforo.Event, want inforo.Event) bool {
+		containsEvent := func(events []model.StreamEvent, want model.StreamEvent) bool {
 			for _, e := range events {
 				if e.Type == want.Type && e.Payload == want.Payload {
 					return true
@@ -357,13 +358,13 @@ func TestCore_EventFiltering(t *testing.T) {
 		core := NewTestDefaultCore()
 		var handlerCalled bool
 
-		core.On("CustomEvent", func(e inforo.Event) {
+		core.On("CustomEvent", func(e model.StreamEvent) {
 			handlerCalled = true
 			assert.Equal(t, "CustomEvent", e.Type)
 			assert.Equal(t, "data", e.Payload)
 		})
 
-		core.EmitEvent(inforo.Event{
+		core.EmitEvent(model.StreamEvent{
 			Type:    "CustomEvent",
 			Payload: "data",
 		})
@@ -402,7 +403,7 @@ func TestCore_ConcurrentEvents(t *testing.T) {
 		for i := 0; i < count; i++ {
 			go func(n int) {
 				defer wg.Done()
-				core.EmitEvent(inforo.Event{
+				core.EmitEvent(model.StreamEvent{
 					Type:    "Concurrent",
 					Payload: n,
 				})
@@ -434,7 +435,7 @@ func TestCore_EventTimestamps(t *testing.T) {
 		eventChan := core.Subscribe()
 
 		before := time.Now()
-		core.EmitEvent(inforo.Event{Type: "TimestampTest"})
+		core.EmitEvent(model.StreamEvent{Type: "TimestampTest"})
 		time.Sleep(5 * time.Millisecond)
 		select {
 		case e := <-eventChan:

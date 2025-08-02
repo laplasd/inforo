@@ -14,3 +14,10 @@ type EventHistory struct {
 	MU    sync.RWMutex `json:"-"`
 	Event []Event
 }
+
+type StreamEvent struct {
+	Type      string
+	Payload   interface{}
+	Timestamp time.Time
+	Origin    string
+}
