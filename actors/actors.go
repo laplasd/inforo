@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/laplasd/inforo/model"
 	"github.com/sirupsen/logrus"
 )
 
@@ -92,4 +93,16 @@ func (as *ActorSystem) Stop() {
 		actor.Stop()
 	}
 	as.actors = nil
+}
+
+// Сообщение для регистрации компонента
+type ComponentRegisterMsg struct {
+	Component model.Component
+	ReplyTo   chan ComponentRegisterResponse
+}
+
+// Ответ от актора
+type ComponentRegisterResponse struct {
+	Component *model.Component
+	Error     error
 }
