@@ -49,6 +49,7 @@ func (co *ComponentActor) Receive(ctx actorsystem.ActorContext, msg interface{})
 func (co *ComponentActor) handleCreate(cmd actorsystem.ComponentRegisterMsg, ctx actorsystem.ActorContext) {
 	// Преобразуем Component в map[string]interface{} для Delta.State
 
+	co.logger.Debug("ComponentActor.handleCreate")
 	delta := model.Delta{
 		ID:        cmd.Component.ID,
 		Type:      model.DeltaTypeCreate,

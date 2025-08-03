@@ -151,6 +151,7 @@ func (as *ActorSystem) SetDispatcherWorkers(count int) {
 
 // Tell отправляет сообщение без ожидания ответа
 func (as *ActorSystem) Tell(path string, msg interface{}) error {
+	as.logger.Debugf("ActorSystem.Tell(path '%s', msg '%v')", path, msg)
 	actor := as.GetActor(path)
 	if actor == nil {
 		return fmt.Errorf("actor %s not found", path)
@@ -160,6 +161,7 @@ func (as *ActorSystem) Tell(path string, msg interface{}) error {
 
 // Ask отправляет сообщение с ожиданием ответа
 func (as *ActorSystem) Ask(path string, msg interface{}, timeout time.Duration) (interface{}, error) {
+	as.logger.Debugf("ActorSystem.Ask(path '%s', msg '%v', timeout '%v')", path, msg, timeout)
 	actor := as.GetActor(path)
 	if actor == nil {
 		return nil, fmt.Errorf("actor %s not found", path)
