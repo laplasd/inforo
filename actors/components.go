@@ -41,6 +41,8 @@ func (co *ComponentActor) Receive(ctx actorsystem.ActorContext, msg interface{})
 		co.handleCreate(cmd, ctx)
 	case actorsystem.ComponentReadMsg:
 		co.handleRead(cmd, ctx)
+	default:
+		fmt.Printf("unknown type. Skip")
 
 	}
 }
