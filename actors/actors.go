@@ -24,6 +24,8 @@ var (
 type ActorSystem struct {
 	mu         sync.RWMutex
 	actors     map[string]ActorRef
+	tags       map[string][]string // actor path -> tags
+	actorType  map[string]string   // actor path -> type
 	dispatcher *Dispatcher
 	logger     *logrus.Logger
 	ctx        context.Context
@@ -63,6 +65,87 @@ func (as *ActorSystem) GetActor(path string) ActorRef {
 	as.mu.RLock()
 	defer as.mu.RUnlock()
 	return as.actors[path]
+}
+
+// ListActors возвращает список всех зарегистрированных акторов
+func (as *ActorSystem) ListActors() []string {
+	as.mu.RLock()
+	defer as.mu.RUnlock()
+
+	paths := make([]string, 0, len(as.actors))
+	for path := range as.actors {
+		paths = append(paths, path)
+	}
+	return paths
+}
+
+// RegisterWithMetadata регистрирует актор с метаданными
+func (as *ActorSystem) RegisterWithMetadata(path, actorType string, tags []string, actor ActorRef) error {
+	if err := as.Register(path, actor); err != nil {
+		return err
+	}
+
+	as.mu.Lock()
+	defer as.mu.Unlock()
+	as.tags[path] = tags
+	as.actorType[path] = actorType
+	return nil
+}
+
+// FindActorsByType ищет акторы по типу
+func (as *ActorSystem) FindActorsByType(actorType string) []string {
+	as.mu.RLock()
+	defer as.mu.RUnlock()
+
+	var result []string
+	for path, typ := range as.actorType {
+		if typ == actorType {
+			result = append(result, path)
+		}
+	}
+	return result
+}
+
+// FindActorsByTag ищет акторы по тегу
+func (as *ActorSystem) FindActorsByTag(tag string) []string {
+	as.mu.RLock()
+	defer as.mu.RUnlock()
+
+	var result []string
+	for path, tags := range as.tags {
+		for _, t := range tags {
+			if t == tag {
+				result = append(result, path)
+				break
+			}
+		}
+	}
+	return result
+}
+
+// SetMailboxSize изменяет размер почтового ящика актора
+func (as *ActorSystem) SetMailboxSize(path string, size int) error {
+	actor := as.GetActor(path)
+	if actor == nil {
+		return ErrActorNotFound
+	}
+
+	if ba, ok := actor.(*BaseActor); ok {
+		newMailbox := make(chan interface{}, size)
+		close(ba.mailbox)
+
+		ba.mu.Lock()
+		ba.mailbox = newMailbox
+		ba.mu.Unlock()
+		return nil
+	}
+
+	return errors.New("only BaseActor supports mailbox resizing")
+}
+
+// SetDispatcherWorkers изменяет количество рабочих dispatcher
+func (as *ActorSystem) SetDispatcherWorkers(count int) {
+	as.dispatcher.SetWorkers(count)
 }
 
 // Tell отправляет сообщение без ожидания ответа

@@ -3,6 +3,7 @@ package actors
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type ActorRef interface {
 
 // BaseActor - базовая реализация актора
 type BaseActor struct {
+	mu       sync.RWMutex
 	path     string
 	mailbox  chan interface{}
 	behavior ActorBehavior

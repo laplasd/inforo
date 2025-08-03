@@ -45,3 +45,8 @@ func (d *Dispatcher) Schedule(fn func()) {
 		d.logger.Warn("dispatcher queue overflow")
 	}
 }
+
+func (d *Dispatcher) SetWorkers(num int) {
+	d.workers = num
+
+}
