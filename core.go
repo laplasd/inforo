@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	actorsystem "github.com/laplasd/inforo/actorSystem"
+	"github.com/laplasd/inforo/actors"
 	"github.com/laplasd/inforo/api"
 	"github.com/laplasd/inforo/hlc"
 	"github.com/laplasd/inforo/model"
@@ -123,6 +124,7 @@ func NewCore(opt CoreOptions) *Core {
 	c.supervisor = actorsystem.NewSupervisor(c.Logger)
 	c.ActorSystem = actorsystem.NewActorSystem(c.Logger)
 	go c.eventLoop(context.Background())
+	c.ActorSystem.Register("internal.component", actors.NewComponentActor(opts.Logger))
 	return c
 }
 
