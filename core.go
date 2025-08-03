@@ -14,7 +14,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/laplasd/inforo/actors"
+	actorsystem "github.com/laplasd/inforo/actorSystem"
 	"github.com/laplasd/inforo/api"
 	"github.com/laplasd/inforo/hlc"
 	"github.com/laplasd/inforo/model"
@@ -35,8 +35,8 @@ type Core struct {
 	eventHandlers map[string][]func(model.StreamEvent) // Тип события -> обработчики
 	reactiveMu    sync.RWMutex
 	// Actors
-	ActorSystem *actors.ActorSystem
-	supervisor  *actors.Supervisor
+	ActorSystem *actorsystem.ActorSystem
+	supervisor  *actorsystem.Supervisor
 
 	// V1 Core
 	Components         api.ComponentRegistry            // Registry for system components
@@ -91,8 +91,8 @@ func NewDefaultCore() *Core {
 		Tasks:              opts.Tasks,
 		Plans:              opts.Plans,
 	}
-	c.supervisor = actors.NewSupervisor(c.Logger)
-	c.ActorSystem = actors.NewActorSystem(c.Logger)
+	c.supervisor = actorsystem.NewSupervisor(c.Logger)
+	c.ActorSystem = actorsystem.NewActorSystem(c.Logger)
 	go c.eventLoop(context.Background())
 	return c
 }
@@ -120,8 +120,8 @@ func NewCore(opt CoreOptions) *Core {
 		Tasks:              opts.Tasks,
 		Plans:              opts.Plans,
 	}
-	c.supervisor = actors.NewSupervisor(c.Logger)
-	c.ActorSystem = actors.NewActorSystem(c.Logger)
+	c.supervisor = actorsystem.NewSupervisor(c.Logger)
+	c.ActorSystem = actorsystem.NewActorSystem(c.Logger)
 	go c.eventLoop(context.Background())
 	return c
 }

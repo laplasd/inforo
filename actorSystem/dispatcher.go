@@ -1,4 +1,4 @@
-package actors
+package actorsystem
 
 import "github.com/sirupsen/logrus"
 
@@ -10,6 +10,7 @@ type Dispatcher struct {
 }
 
 func NewDispatcher(workers int, logger *logrus.Logger) *Dispatcher {
+	logger.Debugf(`inforo: init ActorSystem, workers: %s`, workers)
 	d := &Dispatcher{
 		workers:   workers,
 		workQueue: make(chan func(), 10000),
@@ -20,6 +21,7 @@ func NewDispatcher(workers int, logger *logrus.Logger) *Dispatcher {
 }
 
 func (d *Dispatcher) start() {
+	d.logger.Debugf("Dispatcher: start")
 	for i := 0; i < d.workers; i++ {
 		go d.worker()
 	}

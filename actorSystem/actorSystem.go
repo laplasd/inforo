@@ -1,4 +1,4 @@
-package actors
+package actorsystem
 
 import (
 	"context"
@@ -35,6 +35,7 @@ type ActorSystem struct {
 // NewActorSystem создает новую акторную систему
 func NewActorSystem(logger *logrus.Logger) *ActorSystem {
 	ctx, cancel := context.WithCancel(context.Background())
+	logger.Debug("inforo: init ActorSystem")
 	return &ActorSystem{
 		actors:     make(map[string]ActorRef),
 		dispatcher: NewDispatcher(100, logger),
@@ -186,6 +187,17 @@ type ComponentRegisterMsg struct {
 
 // Ответ от актора
 type ComponentRegisterResponse struct {
+	Component *model.Component
+	Error     error
+}
+
+type ComponentReadMsg struct {
+	ComponentID string
+	ReplyTo     chan ComponentRegisterResponse
+}
+
+// Ответ от актора
+type ComponentReadResponse struct {
 	Component *model.Component
 	Error     error
 }
