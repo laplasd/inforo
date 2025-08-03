@@ -43,6 +43,7 @@ func NewBaseActor(path string, behavior ActorBehavior, system *ActorSystem, logg
 }
 
 func (a *BaseActor) Run() {
+	a.logger.Debugf("BaseActor[%s].Run", a.path)
 	for msg := range a.mailbox {
 		if a.stopping {
 			return
@@ -53,6 +54,7 @@ func (a *BaseActor) Run() {
 }
 
 func (a *BaseActor) Tell(msg interface{}) error {
+	a.logger.Debugf("BaseActor[%s].Tell(msg '%v')", a.path, msg)
 	if a.stopping {
 		return errors.New("actor is stopping")
 	}
@@ -61,7 +63,7 @@ func (a *BaseActor) Tell(msg interface{}) error {
 }
 
 func (a *BaseActor) Ask(msg interface{}, timeout time.Duration) (interface{}, error) {
-	a.logger.Debug("BaseActor[].Ask", a.path)
+	a.logger.Debugf("BaseActor[%s].Ask", a.path)
 	if a.stopping {
 		return nil, errors.New("actor is stopping")
 	}
@@ -81,6 +83,7 @@ func (a *BaseActor) Ask(msg interface{}, timeout time.Duration) (interface{}, er
 }
 
 func (a *BaseActor) Stop() error {
+	a.logger.Debugf("BaseActor[%s].Stop", a.path)
 	a.stopping = true
 	close(a.mailbox)
 	return nil
