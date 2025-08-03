@@ -30,7 +30,7 @@ func NewComponentActor(logger *logrus.Logger) *ComponentActor {
 		logger:   logger,
 		handlers: make(map[model.Status]func(interface{})),
 	}
-	act.BaseActor = actorsystem.NewBaseActor("watchdog", act.Receive, nil)
+	act.BaseActor = actorsystem.NewBaseActor("internal.component", act.Receive, nil)
 	return act
 }
 
