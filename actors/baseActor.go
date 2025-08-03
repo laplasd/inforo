@@ -1,6 +1,7 @@
 package actors
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -40,7 +41,7 @@ func (a *BaseActor) Run() {
 		if a.stopping {
 			return
 		}
-		ctx := NewActorContext(a.path, a.system)
+		ctx := NewActorContext(context.Background(), a.path, a.system)
 		a.behavior(ctx, msg)
 	}
 }

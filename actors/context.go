@@ -1,14 +1,18 @@
 package actors
 
+import "context"
+
 // ActorContext предоставляет контекст для обработки сообщений
 type ActorContext struct {
+	context.Context
 	selfPath string
 	sender   ActorRef
 	system   *ActorSystem
 }
 
-func NewActorContext(path string, system *ActorSystem) ActorContext {
+func NewActorContext(parent context.Context, path string, system *ActorSystem) ActorContext {
 	return ActorContext{
+		Context:  parent,
 		selfPath: path,
 		system:   system,
 	}
