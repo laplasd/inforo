@@ -35,7 +35,7 @@ type Core struct {
 	eventHandlers map[string][]func(model.StreamEvent) // Тип события -> обработчики
 	reactiveMu    sync.RWMutex
 	// Actors
-	actorSystem *actors.ActorSystem
+	ActorSystem *actors.ActorSystem
 	supervisor  *actors.Supervisor
 
 	// V1 Core
@@ -92,7 +92,7 @@ func NewDefaultCore() *Core {
 		Plans:              opts.Plans,
 	}
 	c.supervisor = actors.NewSupervisor(c.Logger)
-	c.actorSystem = actors.NewActorSystem(c.Logger)
+	c.ActorSystem = actors.NewActorSystem(c.Logger)
 	go c.eventLoop(context.Background())
 	return c
 }
@@ -121,7 +121,7 @@ func NewCore(opt CoreOptions) *Core {
 		Plans:              opts.Plans,
 	}
 	c.supervisor = actors.NewSupervisor(c.Logger)
-	c.actorSystem = actors.NewActorSystem(c.Logger)
+	c.ActorSystem = actors.NewActorSystem(c.Logger)
 	go c.eventLoop(context.Background())
 	return c
 }
