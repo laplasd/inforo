@@ -27,7 +27,7 @@ import (
 type Core struct {
 	Logger *logrus.Logger // Central logger instance
 	//HLC
-	quantumClock *hlc.HLC
+	QuantumClock *hlc.HLC
 	// Events
 	eventStream   chan model.StreamEvent
 	subscribers   []chan model.StreamEvent
@@ -81,7 +81,7 @@ func NewDefaultCore() *Core {
 
 	c := &Core{
 		Logger:             opts.Logger,
-		quantumClock:       hlc.NewHLC(),
+		QuantumClock:       hlc.NewHLC(),
 		eventStream:        make(chan model.StreamEvent, 100),
 		eventHandlers:      make(map[string][]func(model.StreamEvent)),
 		Components:         opts.Components,
@@ -110,7 +110,7 @@ func NewCore(opt CoreOptions) *Core {
 
 	c := &Core{
 		Logger:             opts.Logger,
-		quantumClock:       hlc.NewHLC(),
+		QuantumClock:       hlc.NewHLC(),
 		eventStream:        make(chan model.StreamEvent, 100),
 		eventHandlers:      make(map[string][]func(model.StreamEvent)),
 		Components:         opts.Components,
@@ -255,7 +255,7 @@ func (c *Core) Subscribe(eventTypes ...string) <-chan model.StreamEvent {
 
 // Event API
 func (c *Core) EmitEvent(event model.StreamEvent) {
-	event.Timestamp = c.quantumClock.Now()
+	event.Timestamp = c.QuantumClock.Now()
 	select {
 	case c.eventStream <- event:
 	default:
