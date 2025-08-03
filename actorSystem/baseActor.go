@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ActorRef - интерфейс для взаимодействия с актором
@@ -18,6 +20,7 @@ type ActorRef interface {
 
 // BaseActor - базовая реализация актора
 type BaseActor struct {
+	logger   logrus.Logger
 	mu       sync.RWMutex
 	path     string
 	mailbox  chan interface{}
@@ -29,8 +32,9 @@ type BaseActor struct {
 type ActorBehavior func(ctx ActorContext, msg interface{})
 
 // NewBaseActor создает новый базовый актор
-func NewBaseActor(path string, behavior ActorBehavior, system *ActorSystem) *BaseActor {
+func NewBaseActor(path string, behavior ActorBehavior, system *ActorSystem, logger logrus.Logger) *BaseActor {
 	return &BaseActor{
+		logger:   logger,
 		path:     path,
 		mailbox:  make(chan interface{}, 1000), // Буферизированный почтовый ящик
 		behavior: behavior,
@@ -57,12 +61,13 @@ func (a *BaseActor) Tell(msg interface{}) error {
 }
 
 func (a *BaseActor) Ask(msg interface{}, timeout time.Duration) (interface{}, error) {
+	a.logger.Debug("BaseActor[].Ask", a.path)
 	if a.stopping {
 		return nil, errors.New("actor is stopping")
 	}
 
 	respCh := make(chan interface{}, 1)
-	a.mailbox <- &askMessage{
+	a.mailbox <- &AskMessage{
 		payload:  msg,
 		response: respCh,
 	}

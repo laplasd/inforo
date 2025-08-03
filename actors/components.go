@@ -30,7 +30,7 @@ func NewComponentActor(logger *logrus.Logger) *ComponentActor {
 		logger:   logger,
 		handlers: make(map[model.Status]func(interface{})),
 	}
-	act.BaseActor = actorsystem.NewBaseActor("internal.component", act.Receive, nil)
+	act.BaseActor = actorsystem.NewBaseActor("internal.component", act.Receive, nil, *logger)
 	return act
 }
 
@@ -41,6 +41,8 @@ func (co *ComponentActor) Receive(ctx actorsystem.ActorContext, msg interface{})
 		co.handleCreate(cmd, ctx)
 	case actorsystem.ComponentReadMsg:
 		co.handleRead(cmd, ctx)
+	case actorsystem.AskMessage:
+		fmt.Printf("unknown type. AskMessage")
 	default:
 		fmt.Printf("unknown type. Skip")
 

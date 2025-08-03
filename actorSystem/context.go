@@ -38,7 +38,7 @@ func (ctx *ActorContext) Reply(response interface{}) {
 }
 
 // askMessage - внутреннее сообщение для Ask-паттерна
-type askMessage struct {
+type AskMessage struct {
 	payload  interface{}
 	response chan<- interface{}
 }

@@ -63,6 +63,7 @@ func (as *ActorSystem) Register(path string, actor ActorRef) error {
 
 // GetActor возвращает ссылку на актор
 func (as *ActorSystem) GetActor(path string) ActorRef {
+	as.logger.Debugf("ActorSystem.GetActor(path '%s')", path)
 	as.mu.RLock()
 	defer as.mu.RUnlock()
 	return as.actors[path]
