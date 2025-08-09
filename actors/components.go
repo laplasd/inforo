@@ -38,7 +38,7 @@ func NewComponentActor(logger *logrus.Logger) *ComponentActor {
 // CRUD-методы через сообщения
 func (co *ComponentActor) Receive(ctx actorsystem.ActorContext, msg interface{}) {
 	switch cmd := msg.(type) {
-	case actorsystem.AskMessage:
+	case *actorsystem.AskMessage:
 		// Распаковываем вложенное сообщение
 		switch innerMsg := cmd.Payload.(type) {
 		case actorsystem.ComponentRegisterMsg:
