@@ -38,20 +38,32 @@ func NewComponentActor(logger *logrus.Logger) *ComponentActor {
 // CRUD-методы через сообщения
 func (co *ComponentActor) Receive(ctx actorsystem.ActorContext, msg interface{}) {
 	switch cmd := msg.(type) {
-	case actorsystem.ComponentRegisterMsg:
-		co.handleCreate(cmd, ctx)
-	case actorsystem.ComponentReadMsg:
-		co.handleRead(cmd, ctx)
 	case actorsystem.AskMessage:
-		fmt.Printf("unknown type. AskMessage")
-	default:
-		fmt.Printf("unknown type. Skip. type %v", cmd)
+		// Распаковываем вложенное сообщение
+		switch innerMsg := cmd.Payload.(type) {
+		case actorsystem.ComponentRegisterMsg:
+			result, err := co.handleCreate(innerMsg, ctx)
+			cmd.Response <- actorsystem.ComponentRegisterResponse{
+				Component: result,
+				Error:     err,
+			}
 
+		case actorsystem.ComponentReadMsg:
+			result, err := co.handleRead(innerMsg, ctx)
+			cmd.Response <- actorsystem.ComponentReadResponse{
+				Component: result,
+				Error:     err,
+			}
+		default:
+			cmd.Response <- fmt.Errorf("unsupported message type: %T", innerMsg)
+		}
+	default:
+		fmt.Printf("unknown message type: %T\n", msg)
 	}
 }
 
 // Create
-func (co *ComponentActor) handleCreate(cmd actorsystem.ComponentRegisterMsg, ctx actorsystem.ActorContext) {
+func (co *ComponentActor) handleCreate(cmd actorsystem.ComponentRegisterMsg, ctx actorsystem.ActorContext) (*model.Component, error) {
 	// Преобразуем Component в map[string]interface{} для Delta.State
 
 	co.logger.Debug("ComponentActor.handleCreate")
@@ -64,38 +76,34 @@ func (co *ComponentActor) handleCreate(cmd actorsystem.ComponentRegisterMsg, ctx
 	delta.State["component"] = cmd.Component
 
 	if _, err := co.store.Merge(delta); err != nil {
-		ctx.Reply(actorsystem.ComponentRegisterResponse{Error: err})
-		return
+		return nil, err
 	}
 
 	co.stateCache.Put(cmd.Component.ID, cmd.Component)
-	ctx.Reply(actorsystem.ComponentRegisterResponse{Component: &cmd.Component})
-	co.Tell(actorsystem.ComponentRegisterResponse{Component: &cmd.Component})
+	component, err := co.reconstructComponent(cmd.Component.ID)
+	if err != nil {
+		return nil, err
+	}
+	return component, nil
 }
 
 // Read
-func (co *ComponentActor) handleRead(cmd actorsystem.ComponentReadMsg, ctx actorsystem.ActorContext) {
+func (co *ComponentActor) handleRead(cmd actorsystem.ComponentReadMsg, ctx actorsystem.ActorContext) (*model.Component, error) {
 	// Проверяем кэш
 	if cached, exists := co.stateCache.Get(cmd.ComponentID); exists {
-		ctx.Reply(actorsystem.ComponentReadResponse{
-			Component: cached.(*model.Component),
-		})
-		return
+		return cached.(*model.Component), nil
 	}
 
 	// Реконструируем из дельт
 	component, err := co.reconstructComponent(cmd.ComponentID)
 	if err != nil {
-		ctx.Reply(actorsystem.ComponentReadResponse{Error: err})
-		return
+		return nil, err
 	}
 
 	// Обновляем кэш
 	co.stateCache.Put(cmd.ComponentID, component)
 
-	ctx.Reply(actorsystem.ComponentReadResponse{
-		Component: component,
-	})
+	return component, err
 }
 
 func (co *ComponentActor) reconstructComponent(id string) (*model.Component, error) {

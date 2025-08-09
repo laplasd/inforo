@@ -70,8 +70,8 @@ func (a *BaseActor) Ask(msg interface{}, timeout time.Duration) (interface{}, er
 
 	respCh := make(chan interface{}, 1)
 	a.mailbox <- &AskMessage{
-		payload:  msg,
-		response: respCh,
+		Payload:  msg,
+		Response: respCh,
 	}
 
 	select {
