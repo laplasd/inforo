@@ -15,6 +15,14 @@ type CRDTStore struct {
 
 var ErrNotFound = fmt.Errorf("crdt: not found")
 
+func New() *CRDTStore {
+	return &CRDTStore{
+		data:       make(map[string][]model.Delta),
+		tombstones: map[string]bool{},
+		mu:         sync.RWMutex{},
+	}
+}
+
 func (s *CRDTStore) Merge(delta model.Delta) (model.Delta, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
