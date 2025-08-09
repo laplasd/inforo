@@ -29,6 +29,8 @@ func NewComponentActor(logger *logrus.Logger) *ComponentActor {
 	act := &ComponentActor{
 		logger:   logger,
 		handlers: make(map[model.Status]func(interface{})),
+		hlc:      hlc.NewHLC(),
+		store:    crdt.CRDTStore{},
 	}
 	act.BaseActor = actorsystem.NewBaseActor("internal.component", act.Receive, nil, *logger)
 	go act.BaseActor.Run()
