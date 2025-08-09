@@ -31,6 +31,7 @@ func NewComponentActor(logger *logrus.Logger) *ComponentActor {
 		handlers: make(map[model.Status]func(interface{})),
 	}
 	act.BaseActor = actorsystem.NewBaseActor("internal.component", act.Receive, nil, *logger)
+	act.BaseActor.Run()
 	return act
 }
 
