@@ -45,7 +45,7 @@ func (co *ComponentActor) Receive(ctx actorsystem.ActorContext, msg interface{})
 	case actorsystem.AskMessage:
 		fmt.Printf("unknown type. AskMessage")
 	default:
-		fmt.Printf("unknown type. Skip")
+		fmt.Printf("unknown type. Skip. type %v", cmd)
 
 	}
 }
