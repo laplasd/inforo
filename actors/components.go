@@ -19,7 +19,7 @@ type ComponentActor struct {
 	*actorsystem.BaseActor
 	logger      *logrus.Logger
 	handlers    map[model.Status]func(interface{})
-	store       crdt.CRDTStore
+	store       *crdt.CRDTStore
 	deltaStream chan model.Delta
 	stateCache  *statecache.StateCache
 	hlc         *hlc.HLC
